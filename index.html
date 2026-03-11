@@ -20,6 +20,31 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
   position:fixed; top:14px; right:14px; z-index:99; pointer-events:none;
   font-size:10px; color:rgba(180,200,255,0.55); line-height:1.9; text-align:right;
 }
+/* ── TOUCH CONTROLS (ocultos por defecto, visibles solo en touch) ── */
+#touch-ui { display:none; }
+#touch-top {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  z-index:200; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+}
+#touch-top button {
+  background:rgba(10,20,40,0.82); border:1px solid rgba(100,160,255,0.4);
+  color:#c8dcff; font-family:monospace; font-size:13px;
+  padding:10px 16px; border-radius:8px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  transition: background 0.15s;
+}
+#touch-top button:active { background:rgba(60,100,200,0.5); }
+#touch-freq {
+  position:fixed; right:16px; bottom:120px; z-index:200;
+  display:flex; flex-direction:column; gap:8px;
+}
+#touch-freq button {
+  background:rgba(10,20,40,0.82); border:1px solid rgba(255,100,100,0.4);
+  color:#ff9696; font-family:monospace; font-size:18px;
+  width:44px; height:44px; border-radius:8px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+#touch-freq button:active { background:rgba(200,60,60,0.4); }
 </style>
 </head>
 <body>
@@ -27,14 +52,30 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
 <div id="hud">
   <h2>REALIDAD HOLOGRÁFICA – Fibonacci &amp; Proporción Áurea</h2>
   <div>ESPACIO: modo | R: rotación | S: timeline | C: limpiar | F: Fibonacci</div>
-  <div>+/-: frecuencia (Modo 3) | B: romper hilos | W: consciencia (Modo 4) | DRAG: orbitar | CLICK: pirámide | H: ocultar HUD</div>
+  <div>+/-: frecuencia (Modo 3) | B: romper hilos | W: consciencia (Modo 4) | DRAG: orbitar | CLICK: pirámide</div>
   <div id="mode">Modo: CAMPO HOLOGRÁFICO</div>
   <div id="hover"></div>
-  <div id="info" style="color:#b4dcff;min-height:16px;"></div>
   <div id="freq" style="color:#ff9696;min-height:16px;"></div>
   <div id="cons" style="color:#96ffcc;min-height:16px;"></div>
 </div>
 <div id="hud-r">34 líneas · φ = 1.618<br>Ángulo áureo 137.5°<br>Pirámides 4 lados</div>
+
+<!-- TOUCH UI: aparece solo en dispositivos táctiles -->
+<div id="touch-ui">
+  <div id="touch-top">
+    <button id="btn-modo">MODO</button>
+    <button id="btn-r">ROT</button>
+    <button id="btn-s">TL</button>
+    <button id="btn-f">FIB</button>
+    <button id="btn-c">CLR</button>
+    <button id="btn-b">BREAK</button>
+    <button id="btn-w">LIB</button>
+  </div>
+  <div id="touch-freq">
+    <button id="btn-plus">+</button>
+    <button id="btn-minus">−</button>
+  </div>
+</div>
 
 <script>
 // ── REALIDAD HOLOGRÁFICA · Vanilla JS Canvas 2D ───────────────
@@ -557,32 +598,13 @@ document.addEventListener('mousedown', e=>{
   if (xPyrs.length>20) xPyrs.shift();
 });
 document.addEventListener('mouseup', ()=>dragOn=false);
-let touchStartX=0, touchStartY=0, touchStartTime=0;
 document.addEventListener('touchstart', e=>{
-  // Only preventDefault on canvas, not on buttons
-  if(e.target.tagName==='CANVAS') e.preventDefault();
-  dragOn=true; touchStartTime=Date.now();
-  touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY;
-  lastMX=touchStartX; lastMY=touchStartY; autoRot=false;
+  e.preventDefault(); dragOn=true;
+  lastMX=e.touches[0].clientX; lastMY=e.touches[0].clientY; autoRot=false;
 },{passive:false});
-document.addEventListener('touchend', e=>{
-  dragOn=false;
-  // Tap detection: short touch + small movement = add pyramid
-  const dt=Date.now()-touchStartTime;
-  const dx=Math.abs((e.changedTouches[0]||{clientX:touchStartX}).clientX-touchStartX);
-  const dy=Math.abs((e.changedTouches[0]||{clientY:touchStartY}).clientY-touchStartY);
-  if(dt<250 && dx<10 && dy<10 && e.target.tagName==='CANVAS'){
-    const ti=hovIdx>=0?hovIdx:Math.floor(Math.random()*TL.length);
-    const t=TL[ti]; const mL=FIB[8+Math.floor(Math.random()*5)]*15;
-    xPyrs.push({ax:t.x,ay:t.y,az:t.z,bx:t.x,bz:t.z,
-      bs:100+Math.random()*150,comp:0,speed:.015+Math.random()*.02,
-      maxLife:mL,life:mL,
-      r:150+Math.random()*105,g:120+Math.random()*120,b:200+Math.random()*55});
-    if(xPyrs.length>20)xPyrs.shift();
-  }
-});
+document.addEventListener('touchend', ()=>dragOn=false);
 document.addEventListener('touchmove', e=>{
-  if(e.target.tagName==='CANVAS') e.preventDefault();
+  e.preventDefault();
   camY+=(e.touches[0].clientX-lastMX)*.005;
   camX=Math.max(-1.2,Math.min(1.2,camX+(e.touches[0].clientY-lastMY)*.005));
   lastMX=e.touches[0].clientX; lastMY=e.touches[0].clientY;
@@ -600,14 +622,111 @@ document.addEventListener('keydown', e=>{
   if(k==='b'||k==='B'){for(const m of mThreads)m.breaking=true;matrixOn=false;}
   if(k==='w'||k==='W') { viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.1); }
   if(k==='f'||k==='F') showFib=!showFib;
-  if(k==='h'||k==='H'){
-    const hud=document.getElementById('hud');
-    const hudr=document.getElementById('hud-r');
-    const vis=hud.style.display!=='none';
-    hud.style.display=vis?'none':'block';
-    hudr.style.display=vis?'none':'block';
-  }
 });
+
+// ── TOUCH UI AUTO-DETECT ──────────────────────────────────────
+(function(){
+  // detectar si es touch
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (!isTouch) return;
+
+  // mostrar UI táctil, ocultar hints de teclado
+  document.getElementById('touch-ui').style.display = 'block';
+  // reducir HUD en mobile
+  const hudKb = document.querySelectorAll('#hud div:not([id])');
+  hudKb.forEach(el => el.style.display = 'none');
+  document.getElementById('hud').style.fontSize = '12px';
+  document.getElementById('hud-r').style.display = 'none';
+
+  // botones
+  document.getElementById('btn-modo').addEventListener('touchstart', e=>{
+    e.preventDefault();
+    viewMode=(viewMode+1)%5;
+    if(viewMode===3){matrixOn=true;mThreads.length=0;}
+    if(viewMode===4){consLv=0;matrixOn=false;}
+  },{passive:false});
+
+  document.getElementById('btn-r').addEventListener('touchstart', e=>{
+    e.preventDefault(); autoRot=!autoRot;
+    document.getElementById('btn-r').textContent = autoRot ? 'ROT ●' : 'ROT';
+  },{passive:false});
+
+  document.getElementById('btn-s').addEventListener('touchstart', e=>{
+    e.preventDefault(); selIdx=Math.floor(Math.random()*TL.length);
+  },{passive:false});
+
+  document.getElementById('btn-f').addEventListener('touchstart', e=>{
+    e.preventDefault(); showFib=!showFib;
+    document.getElementById('btn-f').textContent = showFib ? 'FIB ●' : 'FIB';
+  },{passive:false});
+
+  document.getElementById('btn-c').addEventListener('touchstart', e=>{
+    e.preventDefault(); emotions.length=0; xPyrs.length=0;
+  },{passive:false});
+
+  document.getElementById('btn-b').addEventListener('touchstart', e=>{
+    e.preventDefault();
+    for(const m of mThreads) m.breaking=true; matrixOn=false;
+  },{passive:false});
+
+  document.getElementById('btn-w').addEventListener('touchstart', e=>{
+    e.preventDefault(); viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.15);
+  },{passive:false});
+
+  document.getElementById('btn-plus').addEventListener('touchstart', e=>{
+    e.preventDefault(); emoFreq=Math.min(1,emoFreq+.05);
+  },{passive:false});
+
+  document.getElementById('btn-minus').addEventListener('touchstart', e=>{
+    e.preventDefault(); emoFreq=Math.max(0,emoFreq-.05);
+  },{passive:false});
+
+  // pinch zoom
+  let lastPinchDist=0;
+  window.addEventListener('touchstart', e=>{
+    if(e.touches.length===2){
+      lastPinchDist=Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY
+      );
+    }
+  },{passive:true});
+  window.addEventListener('touchmove', e=>{
+    if(e.touches.length===2){
+      const d=Math.hypot(
+        e.touches[0].clientX-e.touches[1].clientX,
+        e.touches[0].clientY-e.touches[1].clientY
+      );
+      const delta=d-lastPinchDist;
+      camX=Math.max(-1.2,Math.min(1.2,camX-delta*.002));
+      lastPinchDist=d;
+    }
+  },{passive:true});
+
+  // tap para pirámide (1 dedo, sin arrastre)
+  let tapStartX=0, tapStartY=0;
+  window.addEventListener('touchstart', e=>{
+    if(e.touches.length===1){ tapStartX=e.touches[0].clientX; tapStartY=e.touches[0].clientY; }
+  },{passive:true});
+  window.addEventListener('touchend', e=>{
+    if(e.changedTouches.length===1){
+      const dx=e.changedTouches[0].clientX-tapStartX;
+      const dy=e.changedTouches[0].clientY-tapStartY;
+      if(Math.hypot(dx,dy)<10){ // tap sin arrastre → pirámide
+        const ti=Math.floor(Math.random()*TL.length);
+        const t=TL[ti];
+        const mL=FIB[8+Math.floor(Math.random()*5)]*15;
+        xPyrs.push({
+          ax:t.x,ay:t.y,az:t.z, bx:t.x,bz:t.z,
+          bs:100+Math.random()*150, comp:0, speed:.015+Math.random()*.02,
+          maxLife:mL, life:mL,
+          r:150+Math.random()*105, g:120+Math.random()*120, b:200+Math.random()*55
+        });
+        if(xPyrs.length>20) xPyrs.shift();
+      }
+    }
+  },{passive:true});
+})();
 
 loop();
 </script>
