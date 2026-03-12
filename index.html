@@ -6,45 +6,50 @@
 <title>REALIDAD HOLOGRÁFICA</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#080a0f; overflow:hidden; font-family:monospace; }
+body { background:#060810; overflow:hidden; font-family:monospace; }
 canvas { position:fixed; top:0; left:0; z-index:1; }
 #hud {
   position:fixed; top:0; left:0; z-index:99; pointer-events:none;
   font-size:11px; color:#c8dcff; padding:14px; line-height:1.8;
+  text-shadow: 0 0 8px rgba(100,180,255,0.6);
 }
-#hud h2 { font-size:13px; color:#d0e8ff; margin-bottom:3px; }
-#mode  { color:#ffff90; }
+#hud h2 { font-size:13px; color:#e0f0ff; margin-bottom:3px; }
+#mode  { color:#ffff90; text-shadow: 0 0 10px rgba(255,255,100,0.8); }
 #hover { color:#ffc864; min-height:18px; }
 #info  { color:#b4dcff; }
 #hud-r {
   position:fixed; top:14px; right:14px; z-index:99; pointer-events:none;
-  font-size:10px; color:rgba(180,200,255,0.55); line-height:1.9; text-align:right;
+  font-size:10px; color:rgba(180,210,255,0.75); line-height:1.9; text-align:right;
+  text-shadow: 0 0 8px rgba(100,160,255,0.5);
 }
-/* ── TOUCH CONTROLS (ocultos por defecto, visibles solo en touch) ── */
+/* ── TOUCH CONTROLS ── */
 #touch-ui { display:none; }
 #touch-top {
   position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
   z-index:200; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
 }
 #touch-top button {
-  background:rgba(10,20,40,0.82); border:1px solid rgba(100,160,255,0.4);
+  background:rgba(10,20,40,0.88); border:1px solid rgba(100,160,255,0.5);
   color:#c8dcff; font-family:monospace; font-size:13px;
   padding:10px 16px; border-radius:8px; cursor:pointer;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   transition: background 0.15s;
+  text-shadow: 0 0 6px rgba(100,180,255,0.5);
+  box-shadow: 0 0 8px rgba(60,120,255,0.15);
 }
-#touch-top button:active { background:rgba(60,100,200,0.5); }
+#touch-top button:active { background:rgba(60,100,200,0.6); box-shadow: 0 0 16px rgba(100,160,255,0.4); }
 #touch-freq {
   position:fixed; right:16px; bottom:120px; z-index:200;
   display:flex; flex-direction:column; gap:8px;
 }
 #touch-freq button {
-  background:rgba(10,20,40,0.82); border:1px solid rgba(255,100,100,0.4);
+  background:rgba(10,20,40,0.88); border:1px solid rgba(255,100,100,0.5);
   color:#ff9696; font-family:monospace; font-size:18px;
   width:44px; height:44px; border-radius:8px; cursor:pointer;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  text-shadow: 0 0 6px rgba(255,100,100,0.5);
 }
-#touch-freq button:active { background:rgba(200,60,60,0.4); }
+#touch-freq button:active { background:rgba(200,60,60,0.5); }
 </style>
 </head>
 <body>
@@ -55,8 +60,8 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
   <div>+/-: frecuencia (Modo 3) | B: romper hilos | W: consciencia (Modo 4) | DRAG: orbitar | CLICK: pirámide</div>
   <div id="mode">Modo: CAMPO HOLOGRÁFICO</div>
   <div id="hover"></div>
-  <div id="freq" style="color:#ff9696;min-height:16px;"></div>
-  <div id="cons" style="color:#96ffcc;min-height:16px;"></div>
+  <div id="freq" style="color:#ff9696;min-height:16px;text-shadow:0 0 8px rgba(255,100,100,0.6);"></div>
+  <div id="cons" style="color:#96ffcc;min-height:16px;text-shadow:0 0 8px rgba(100,255,180,0.6);"></div>
 </div>
 <div id="hud-r">34 líneas · φ = 1.618<br>Ángulo áureo 137.5°<br>Pirámides 4 lados</div>
 
@@ -64,9 +69,9 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
 <div id="touch-ui">
   <div id="touch-top">
     <button id="btn-modo">MODO</button>
-    <button id="btn-r">ROT</button>
+    <button id="btn-r">ROT ●</button>
     <button id="btn-s">TL</button>
-    <button id="btn-f">FIB</button>
+    <button id="btn-f">FIB ●</button>
     <button id="btn-c">CLR</button>
     <button id="btn-b">BREAK</button>
     <button id="btn-w">LIB</button>
@@ -78,8 +83,8 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
 </div>
 
 <script>
-// ── REALIDAD HOLOGRÁFICA · Vanilla JS Canvas 2D ───────────────
-// Sin librerías. Proyección 3D manual. Funciona en cualquier browser.
+// ── REALIDAD HOLOGRÁFICA · Mobile + Visual Fix ────────────────
+// MEJORAS: partículas con glow radial, colores vivos, dots rellenos
 
 const C   = document.getElementById('c');
 const ctx = C.getContext('2d');
@@ -112,7 +117,8 @@ for (let i=0; i<34; i++) {
   const angle  = i * Math.PI*2 / PHI;
   const radius = FIB[Math.min(i,19)] * 2.5;
   const hue    = (i*137.5)%360;
-  const [r,g,b] = hslToRgb(hue/360, 0.65, 0.65);
+  // FIX: más saturación y luminosidad para colores vivos
+  const [r,g,b] = hslToRgb(hue/360, 0.85, 0.72);
   TL.push({
     x: Math.cos(angle)*radius,
     y: -150 + (Math.random()*80-40),
@@ -124,19 +130,15 @@ for (let i=0; i<34; i++) {
 }
 
 // ── 3D projection ─────────────────────────────────────────────
-// Rotate point by camY (around Y) and camX (around X), then project
 function project(x, y, z) {
-  // rotate Y
   const cosY=Math.cos(camY), sinY=Math.sin(camY);
   let rx = x*cosY + z*sinY;
   let rz =-x*sinY + z*cosY;
   let ry = y;
-  // rotate X
   const cosX=Math.cos(camX), sinX=Math.sin(camX);
   let fy = ry*cosX - rz*sinX;
   let fz = ry*sinX + rz*cosX;
   let fx = rx;
-  // perspective
   const fov = 600;
   const camDist = 900;
   const dz = fz + camDist;
@@ -173,17 +175,45 @@ function circle3(x,y,z, r, strokeStyle, alpha, weight) {
   ctx.globalAlpha = 1;
 }
 
+// FIX: dot3 ahora rellena en lugar de trazar contorno
 function dot3(x,y,z, r, col, alpha) {
   const p=project(x,y,z);
   if (!p) return;
   const sr=r*p.scale;
   if (sr<0.3) return;
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-  ctx.strokeStyle = col;
-  ctx.lineWidth   = 1.5;
+  ctx.fillStyle = col;
   ctx.beginPath();
-  ctx.arc(p.sx, p.sy, Math.max(0.5,sr), 0, Math.PI*2);
-  ctx.stroke();
+  ctx.arc(p.sx, p.sy, Math.max(0.8,sr), 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+// FIX: Nueva función glow radial para partículas emocionales
+function glowDot3(x,y,z, r, cr,cg,cb, alpha) {
+  const p=project(x,y,z);
+  if (!p) return;
+  const sr = Math.max(1, r*p.scale);
+  if (sr < 0.5) return;
+  const px = p.sx, py = p.sy;
+
+  // Halo exterior suave
+  const grad = ctx.createRadialGradient(px, py, 0, px, py, sr*3.5);
+  grad.addColorStop(0,   `rgba(${cr|0},${cg|0},${cb|0},${Math.min(1, alpha)})`);
+  grad.addColorStop(0.3, `rgba(${cr|0},${cg|0},${cb|0},${Math.min(1, alpha*0.6)})`);
+  grad.addColorStop(1,   `rgba(${cr|0},${cg|0},${cb|0},0)`);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(px, py, sr*3.5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Núcleo sólido brillante
+  ctx.globalAlpha = Math.min(1, alpha*1.4);
+  ctx.fillStyle = `rgb(${Math.min(255,(cr|0)+60)},${Math.min(255,(cg|0)+60)},${Math.min(255,(cb|0)+60)})`;
+  ctx.beginPath();
+  ctx.arc(px, py, Math.max(0.8, sr*0.6), 0, Math.PI*2);
+  ctx.fill();
   ctx.globalAlpha = 1;
 }
 
@@ -211,11 +241,10 @@ function loop() {
   fibPh += 0.02;
   if (autoRot) camY += 0.003;
 
-  ctx.clearRect(0,0,C.width,C.height);
-  ctx.fillStyle = '#080a0f';
+  // FIX: trail suave en lugar de clearRect puro
+  ctx.fillStyle = 'rgba(6,8,16,0.88)';
   ctx.fillRect(0,0,C.width,C.height);
 
-  // hover
   hovIdx=-1;
   let minD=40;
   for (let i=0;i<TL.length;i++) {
@@ -249,36 +278,39 @@ function modeField() {
       const d=Math.hypot(t.x-o.x,t.y-o.y,t.z-o.z);
       const cd=FIB[t.fibIdx%20]*3;
       if (d<cd) {
-        const a=((1-d/cd)*28)*(hov?2:1);
-        stroke3(t.x,t.y,t.z, o.x,o.y,o.z, 80,120,160,a, hov?1:0.5);
+        // FIX: alpha mucho más alto (era 28, ahora 110) y colores mezclados
+        const a=((1-d/cd)*110)*(hov?2.5:1);
+        const mr=(t.r+o.r)/2, mg=(t.g+o.g)/2, mb=(t.b+o.b)/2;
+        stroke3(t.x,t.y,t.z, o.x,o.y,o.z, mr,mg,mb, a, hov?1.5:0.7);
       }
     }
     drawTL(t, hov, 1.0);
   }
   drawTLSel(TL[selIdx]);
-  if (hovIdx>=0 && frame%5===0) spawnPart(TL[hovIdx], false);
+  if (hovIdx>=0 && frame%3===0) spawnPart(TL[hovIdx], false);
+  if (frame%18===0) spawnPart(TL[Math.floor(Math.random()*TL.length)], false);
 }
 
 function modeSel(comp) {
-  for (let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],i===hovIdx,0.15);
+  for (let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],i===hovIdx,0.2);
   drawTLSel(TL[selIdx]);
   drawPyramidFromTL(TL[selIdx], comp);
-  if (frame%21===0) spawnPart(TL[selIdx], false);
+  if (frame%15===0) spawnPart(TL[selIdx], false);
 }
 
 function modeFull() {
-  for (let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],i===hovIdx,0.06);
+  for (let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],i===hovIdx,0.1);
   drawTLSel(TL[selIdx]);
   drawPyramidFromTL(TL[selIdx], 1.0);
   drawGrid(TL[selIdx]);
-  if (frame%8===0) spawnPart(TL[selIdx], false);
+  if (frame%6===0) spawnPart(TL[selIdx], false);
 }
 
 function modeMatrix() {
-  for (let i=0;i<TL.length;i++) drawTL(TL[i],i===hovIdx,0.06);
+  for (let i=0;i<TL.length;i++) drawTL(TL[i],i===hovIdx,0.1);
   drawTLSel(TL[selIdx]);
   drawPyramidFromTL(TL[selIdx], 1.0);
-  if (matrixOn && frame%13===0 && mThreads.length<89) {
+  if (matrixOn && frame%10===0 && mThreads.length<89) {
     const a=Math.random()*Math.PI*2;
     const fr=map(emoFreq,0,1,255,120), fg=map(emoFreq,0,1,80,120), fb=map(emoFreq,0,1,80,200);
     mThreads.push({
@@ -287,7 +319,7 @@ function modeMatrix() {
       prog:0, breaking:false, r:fr, g:fg, b:fb
     });
   }
-  if (frame%5===0) spawnPart(TL[selIdx], true);
+  if (frame%4===0) spawnPart(TL[selIdx], true);
 }
 
 function modeLiberation() {
@@ -295,14 +327,14 @@ function modeLiberation() {
   for (let i=0;i<TL.length;i++) {
     if (i===selIdx) continue;
     const t=TL[i], hov=(i===hovIdx);
-    dot3(t.x,t.y,t.z, (3+consLv*2)*(hov?1.5:1), `rgba(150,200,255,1)`, consLv*0.4*(hov?2:1));
+    // FIX: alpha más visible en modo liberación
+    dot3(t.x,t.y,t.z, (3+consLv*2)*(hov?1.5:1), `rgba(180,220,255,1)`, consLv*0.65*(hov?2:1));
   }
   drawTLSel(TL[selIdx]);
   drawPyramidFromTL(TL[selIdx], 1-consLv*.7);
   matrixOn=false;
   for (const m of mThreads) m.breaking=true;
-  if (frame%10===0) spawnPart(TL[Math.floor(Math.random()*TL.length)], false);
-  // ── ESFERA DE CONSCIENCIA ──
+  if (frame%7===0) spawnPart(TL[Math.floor(Math.random()*TL.length)], false);
   drawConSphere(consLv);
 }
 
@@ -310,10 +342,10 @@ function drawConSphere(lv) {
   if (lv < 0.05) return;
   const R = lv * 700;
   const segs = 24;
-  const a = lv * 0.25;
-  ctx.strokeStyle = `rgba(200,255,240,${a})`;
-  ctx.lineWidth = 1.0;
-  // latitudes
+  // FIX: alpha más visible
+  const a = lv * 0.55;
+  ctx.strokeStyle = `rgba(180,255,230,${a})`;
+  ctx.lineWidth = 1.2;
   for (let lat = -80; lat <= 80; lat += 20) {
     const phi = lat * Math.PI / 180;
     const r2 = R * Math.cos(phi);
@@ -329,7 +361,6 @@ function drawConSphere(lv) {
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
     ctx.stroke();
   }
-  // longitudes
   for (let lon = 0; lon < 360; lon += 30) {
     const theta = lon * Math.PI / 180;
     const pts = [];
@@ -343,13 +374,13 @@ function drawConSphere(lv) {
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
     ctx.stroke();
   }
-  // pulsos adicionales Fibonacci
   for (let i = 0; i < 5; i++) {
     const pulse = (fibPh + i * Math.PI * 2 / 5) % (Math.PI * 2);
     const pr = Math.abs(Math.sin(pulse)) * FIB[i+3] * 8 + R;
-    const pa = (1 - pulse / (Math.PI*2)) * lv * 0.15;
-    ctx.strokeStyle = `rgba(220,255,200,${pa})`;
-    ctx.lineWidth = 0.8;
+    // FIX: pulsos Fibonacci más visibles
+    const pa = (1 - pulse / (Math.PI*2)) * lv * 0.4;
+    ctx.strokeStyle = `rgba(200,255,180,${pa})`;
+    ctx.lineWidth = 1.2;
     const pts2 = [];
     for (let j = 0; j <= segs; j++) {
       const theta = (j / segs) * Math.PI * 2;
@@ -369,16 +400,16 @@ function drawTL(t, hov, fade) {
   const pm=hov?pulse*1.8:pulse;
   const bs=FIB[Math.min(t.fibIdx%8,7)]*.3;
   const sz=(bs+4)*(hov?1.5:1);
-  const a1=150*pm*fade*(hov?1.5:1);
-  const a2=70*pm*fade*(hov?2:1);
-  dot3(t.x,t.y,t.z, sz, `rgba(${t.r|0},${t.g|0},${t.b|0},1)`, a1/255);
-  // ring (flat ellipse projected)
+  // FIX: alpha base más alto
+  const a1=220*pm*fade*(hov?1.5:1);
+  const a2=130*pm*fade*(hov?2:1);
+  // FIX: usar glowDot3 para halo visible
+  glowDot3(t.x,t.y,t.z, sz*.6, t.r,t.g,t.b, a1/255);
   const ring=(bs*6+18)*(hov?1.3:1);
-  drawRing3(t.x,t.y,t.z, ring*.5, t.r,t.g,t.b, a2, hov?.8:.4, frame*.02);
+  drawRing3(t.x,t.y,t.z, ring*.5, t.r,t.g,t.b, a2, hov?.9:.5, frame*.02);
 }
 
 function drawRing3(cx,cy,cz, r, cr,cg,cb, a, w, tiltY) {
-  // draw ring in 3D as projected ellipse points
   const pts=[];
   const segs=24;
   for (let i=0;i<=segs;i++) {
@@ -399,15 +430,16 @@ function drawRing3(cx,cy,cz, r, cr,cg,cb, a, w, tiltY) {
 
 function drawTLSel(t) {
   const pulse=Math.sin(frame*.08)*.5+1;
-  dot3(t.x,t.y,t.z, 5*pulse, `rgba(255,255,200,1)`, 0.9);
+  // FIX: nodo seleccionado con glow
+  glowDot3(t.x,t.y,t.z, 5*pulse, 255,255,180, 1.0);
   for (let i=0;i<5;i++) {
     const rr=FIB[i+3]*2*.5;
-    drawRing3(t.x,t.y,t.z, rr, 255,255,150, 120, 1, frame*.03+i*Math.PI/5);
+    drawRing3(t.x,t.y,t.z, rr, 255,255,150, 180, 1.2, frame*.03+i*Math.PI/5);
   }
 }
 
 function drawPyramidFromTL(t, comp) {
-  drawPyramid(t.x,t.y,t.z, t.x,t.z, 120*PHI, comp, 180,200,255, 170);
+  drawPyramid(t.x,t.y,t.z, t.x,t.z, 120*PHI, comp, 180,200,255, 200);
 }
 
 function drawPyramid(ax,ay,az, bx,bz, bs, comp, r,g,b, alpha) {
@@ -421,9 +453,10 @@ function drawPyramid(ax,ay,az, bx,bz, bs, comp, r,g,b, alpha) {
     ay+(v[1]-ay)*comp,
     az+(v[2]-az)*comp
   ]);
-  const a=(alpha/255)*glowI*.8;
+  // FIX: alpha de pirámide más visible
+  const a=(alpha/255)*glowI*.95;
   ctx.strokeStyle=`rgba(${r|0},${g|0},${b|0},${Math.min(1,a)})`;
-  ctx.lineWidth=1.5;
+  ctx.lineWidth=1.8;
   for (const v of av) {
     const p1=project(ax,ay,az), p2=project(v[0],v[1],v[2]);
     if (!p1||!p2) continue;
@@ -440,8 +473,9 @@ function drawPyramid(ax,ay,az, bx,bz, bs, comp, r,g,b, alpha) {
     for (let k=1;k<8;k++) {
       const t2=k/8;
       const ps=av.map(v=>[ax+(v[0]-ax)*t2, ay+(v[1]-ay)*t2, az+(v[2]-az)*t2]);
-      ctx.strokeStyle=`rgba(200,180,255,${map(t2,0,1,.03,.1)*comp})`;
-      ctx.lineWidth=.5;
+      // FIX: secciones internas más visibles
+      ctx.strokeStyle=`rgba(220,200,255,${map(t2,0,1,.08,.22)*comp})`;
+      ctx.lineWidth=.7;
       for (let i=0;i<4;i++) {
         const ni=(i+1)%4;
         const p1=project(ps[i][0],ps[i][1],ps[i][2]);
@@ -454,15 +488,16 @@ function drawPyramid(ax,ay,az, bx,bz, bs, comp, r,g,b, alpha) {
 }
 
 function drawGrid(t) {
-  ctx.strokeStyle='rgba(100,150,200,0.14)'; ctx.lineWidth=.5;
+  // FIX: grilla más visible
   for (let i=-10;i<=10;i++) {
-    stroke3(t.x-300,200,t.z+i*30, t.x+300,200,t.z+i*30, 100,150,200,35,.5);
-    stroke3(t.x+i*30,200,t.z-300, t.x+i*30,200,t.z+300, 100,150,200,35,.5);
+    stroke3(t.x-300,200,t.z+i*30, t.x+300,200,t.z+i*30, 120,180,230,55,.6);
+    stroke3(t.x+i*30,200,t.z-300, t.x+i*30,200,t.z+300, 120,180,230,55,.6);
   }
 }
 
 function drawSpirals() {
-  const cols=[[100,150,255],[60,200,220],[180,140,255]];
+  // FIX: colores más saturados, alpha 0.30 → 0.65
+  const cols=[[120,180,255],[80,230,240],[210,160,255]];
   for (let s=0;s<3;s++) {
     const off=s*Math.PI*2/3;
     const pts=[];
@@ -472,15 +507,14 @@ function drawSpirals() {
       const lx=Math.cos(a)*r;
       const lz=Math.sin(a)*r;
       const ly=Math.sin(a*PHI)*50;
-      // rotate spiral by fibPh
       const rx=lx*Math.cos(fibPh*.3+off) + lz*Math.sin(fibPh*.3+off);
       const rz=-lx*Math.sin(fibPh*.3+off)+ lz*Math.cos(fibPh*.3+off);
       const p=project(rx, ly*Math.cos(fibPh*.2)-rz*Math.sin(fibPh*.2), ly*Math.sin(fibPh*.2)+rz*Math.cos(fibPh*.2));
       if (p) pts.push(p);
     }
     if (pts.length<2) continue;
-    ctx.strokeStyle=`rgba(${cols[s][0]},${cols[s][1]},${cols[s][2]},0.3)`;
-    ctx.lineWidth=1.2;
+    ctx.strokeStyle=`rgba(${cols[s][0]},${cols[s][1]},${cols[s][2]},0.65)`;
+    ctx.lineWidth=1.5;
     ctx.beginPath();
     ctx.moveTo(pts[0].sx,pts[0].sy);
     for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy);
@@ -495,10 +529,11 @@ function drawExtras() {
     ep.life--;
     if (ep.life<=0) { xPyrs.splice(i,1); continue; }
     const af=ep.life/ep.maxLife;
-    drawPyramid(ep.ax,ep.ay,ep.az, ep.bx,ep.bz, ep.bs*ep.comp, af*.8, ep.r,ep.g,ep.b, 170);
+    drawPyramid(ep.ax,ep.ay,ep.az, ep.bx,ep.bz, ep.bs*ep.comp, af*.9, ep.r,ep.g,ep.b, 200);
   }
 }
 
+// FIX PRINCIPAL: partículas con glowDot3 y alpha real
 function drawParticles() {
   for (let i=emotions.length-1;i>=0;i--) {
     const e=emotions[i];
@@ -507,10 +542,12 @@ function drawParticles() {
     e.vz+=(Math.sin(e.z*.01+frame*.01+77)*.5+.5-.5)*(e.ctrl?.2:.5);
     e.vx*=e.ctrl?.95:.98; e.vy*=e.ctrl?.95:.98; e.vz*=e.ctrl?.95:.98;
     e.x+=e.vx; e.y+=e.vy; e.z+=e.vz;
-    e.life--; e.sz+=.06;
+    e.life--; e.sz+=.08;
     if (e.life<=0) { emotions.splice(i,1); continue; }
-    const a=Math.min(.8,(e.life/e.maxLife)*glowI*.7);
-    dot3(e.x,e.y,e.z, e.sz, `rgba(${e.r|0},${e.g|0},${e.b|0},1)`, a);
+    // FIX: alpha sin multiplicar por 0.7, llega a 1.0 real
+    const lifeRatio = e.life / e.maxLife;
+    const a = Math.min(1.0, lifeRatio * 1.4);
+    glowDot3(e.x,e.y,e.z, e.sz, e.r,e.g,e.b, a);
   }
 }
 
@@ -523,25 +560,39 @@ function drawThreads() {
     const cx=m.sx+(m.ex-m.sx)*m.prog;
     const cy=m.sy+(m.ey-m.sy)*m.prog;
     const cz=m.sz+(m.ez-m.sz)*m.prog;
-    const a=(m.breaking?m.prog*100:100)*glowI*.6;
-    stroke3(m.sx,m.sy,m.sz, cx,cy,cz, m.r,m.g,m.b, a, 1);
+    // FIX: hilos más brillantes
+    const a=(m.breaking?m.prog*180:180)*glowI*.8;
+    stroke3(m.sx,m.sy,m.sz, cx,cy,cz, m.r,m.g,m.b, a, 1.5);
   }
 }
 
+// FIX: colores de partículas más saturados y tamaño mayor
 function spawnPart(t, ctrl) {
   const tx=t.x, ty=200, tz=t.z;
   const dx=tx-t.x, dy=ty-t.y, dz=tz-t.z;
   const len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
-  const sp=2+Math.random()*2;
+  const sp=2+Math.random()*3;
   const mL=FIB[5+Math.floor(Math.random()*5)];
+
+  let pr, pg, pb;
+  if (ctrl) {
+    pr = 220+Math.random()*35;
+    pg =  60+Math.random()*80;
+    pb =  80+Math.random()*80;
+  } else {
+    pr = Math.min(255, t.r + 40 + Math.random()*60);
+    pg = Math.min(255, t.g + 40 + Math.random()*60);
+    pb = Math.min(255, t.b + 40 + Math.random()*60);
+  }
+
   emotions.push({
     x:t.x, y:t.y, z:t.z,
-    vx:dx/len*sp, vy:dy/len*sp, vz:dz/len*sp,
+    vx:dx/len*sp + (Math.random()-.5)*1.5,
+    vy:dy/len*sp + (Math.random()-.5)*1.5,
+    vz:dz/len*sp + (Math.random()-.5)*1.5,
     life:mL, maxLife:mL,
-    sz:2+Math.random()*3, ctrl,
-    r:ctrl?200+Math.random()*55:150+Math.random()*105,
-    g:ctrl?80+Math.random()*60:100+Math.random()*100,
-    b:ctrl?100+Math.random()*60:200+Math.random()*55
+    sz: 3+Math.random()*4, ctrl,
+    r: pr, g: pg, b: pb
   });
 }
 
@@ -569,7 +620,6 @@ function hue2rgb(p,q,t) {
 function updateHUD() {
   document.getElementById('mode').textContent='Modo: '+MODES[viewMode];
   document.getElementById('hover').textContent=hovIdx>=0?'⚡ HOVER timeline '+hovIdx+' | Glow '+glowI.toFixed(1)+'x':'';
-  document.getElementById('info').textContent='Pirámides: '+xPyrs.length+' | Fibonacci: '+(showFib?'SÍ':'NO');
   document.getElementById('freq').textContent='Frec. emocional: '+emoFreq.toFixed(2)+' | Hilos: '+mThreads.length;
   document.getElementById('cons').textContent='Consciencia: '+(consLv*100).toFixed(0)+'%';
 }
@@ -593,7 +643,7 @@ document.addEventListener('mousedown', e=>{
     ax:t.x,ay:t.y,az:t.z, bx:t.x,bz:t.z,
     bs:100+Math.random()*150, comp:0, speed:.015+Math.random()*.02,
     maxLife:mL, life:mL,
-    r:150+Math.random()*105, g:120+Math.random()*120, b:200+Math.random()*55
+    r:160+Math.random()*95, g:130+Math.random()*120, b:210+Math.random()*45
   });
   if (xPyrs.length>20) xPyrs.shift();
 });
@@ -626,19 +676,15 @@ document.addEventListener('keydown', e=>{
 
 // ── TOUCH UI AUTO-DETECT ──────────────────────────────────────
 (function(){
-  // detectar si es touch
   const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   if (!isTouch) return;
 
-  // mostrar UI táctil, ocultar hints de teclado
   document.getElementById('touch-ui').style.display = 'block';
-  // reducir HUD en mobile
   const hudKb = document.querySelectorAll('#hud div:not([id])');
   hudKb.forEach(el => el.style.display = 'none');
   document.getElementById('hud').style.fontSize = '12px';
   document.getElementById('hud-r').style.display = 'none';
 
-  // botones
   document.getElementById('btn-modo').addEventListener('touchstart', e=>{
     e.preventDefault();
     viewMode=(viewMode+1)%5;
@@ -703,7 +749,7 @@ document.addEventListener('keydown', e=>{
     }
   },{passive:true});
 
-  // tap para pirámide (1 dedo, sin arrastre)
+  // tap para pirámide
   let tapStartX=0, tapStartY=0;
   window.addEventListener('touchstart', e=>{
     if(e.touches.length===1){ tapStartX=e.touches[0].clientX; tapStartY=e.touches[0].clientY; }
@@ -712,7 +758,7 @@ document.addEventListener('keydown', e=>{
     if(e.changedTouches.length===1){
       const dx=e.changedTouches[0].clientX-tapStartX;
       const dy=e.changedTouches[0].clientY-tapStartY;
-      if(Math.hypot(dx,dy)<10){ // tap sin arrastre → pirámide
+      if(Math.hypot(dx,dy)<10){
         const ti=Math.floor(Math.random()*TL.length);
         const t=TL[ti];
         const mL=FIB[8+Math.floor(Math.random()*5)]*15;
@@ -720,7 +766,7 @@ document.addEventListener('keydown', e=>{
           ax:t.x,ay:t.y,az:t.z, bx:t.x,bz:t.z,
           bs:100+Math.random()*150, comp:0, speed:.015+Math.random()*.02,
           maxLife:mL, life:mL,
-          r:150+Math.random()*105, g:120+Math.random()*120, b:200+Math.random()*55
+          r:160+Math.random()*95, g:130+Math.random()*120, b:210+Math.random()*45
         });
         if(xPyrs.length>20) xPyrs.shift();
       }
