@@ -2,803 +2,808 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>REALIDAD HOLOGRÁFICA</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#060810; overflow:hidden; font-family:monospace; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:#060810; overflow:hidden; font-family:monospace; touch-action:none; }
 canvas { position:fixed; top:0; left:0; z-index:1; }
-#hud {
-  position:fixed; top:0; left:0; z-index:99; pointer-events:none;
-  font-size:11px; color:#c8dcff; padding:14px; line-height:1.8;
-  text-shadow: 0 0 8px rgba(100,180,255,0.6);
+
+/* ── HUD superior ── */
+#hud-top {
+  position:fixed; top:0; left:0; right:0; z-index:99;
+  padding:10px 14px 8px;
+  background:linear-gradient(180deg,rgba(6,8,16,0.85)0%,rgba(6,8,16,0)100%);
+  pointer-events:none;
+  transition: opacity 0.4s;
 }
-#hud h2 { font-size:13px; color:#e0f0ff; margin-bottom:3px; }
-#mode  { color:#ffff90; text-shadow: 0 0 10px rgba(255,255,100,0.8); }
-#hover { color:#ffc864; min-height:18px; }
-#info  { color:#b4dcff; }
-#hud-r {
-  position:fixed; top:14px; right:14px; z-index:99; pointer-events:none;
-  font-size:10px; color:rgba(180,210,255,0.75); line-height:1.9; text-align:right;
-  text-shadow: 0 0 8px rgba(100,160,255,0.5);
+#hud-top h2 {
+  font-size:11px; color:#e0f0ff; letter-spacing:1px;
+  text-shadow:0 0 10px rgba(100,200,255,0.8);
 }
-/* ── TOUCH CONTROLS ── */
-#touch-ui { display:none; }
-#touch-top {
-  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-  z-index:200; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+#hud-mode {
+  font-size:13px; font-weight:bold; color:#ffff90; margin-top:2px;
+  text-shadow:0 0 12px rgba(255,255,100,0.9);
 }
-#touch-top button {
-  background:rgba(10,20,40,0.88); border:1px solid rgba(100,160,255,0.5);
-  color:#c8dcff; font-family:monospace; font-size:13px;
-  padding:10px 16px; border-radius:8px; cursor:pointer;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  transition: background 0.15s;
-  text-shadow: 0 0 6px rgba(100,180,255,0.5);
-  box-shadow: 0 0 8px rgba(60,120,255,0.15);
+#hud-palette {
+  font-size:10px; color:#aaffee; margin-top:1px;
+  text-shadow:0 0 8px rgba(100,255,220,0.6);
 }
-#touch-top button:active { background:rgba(60,100,200,0.6); box-shadow: 0 0 16px rgba(100,160,255,0.4); }
-#touch-freq {
-  position:fixed; right:16px; bottom:120px; z-index:200;
-  display:flex; flex-direction:column; gap:8px;
+#hud-cons {
+  font-size:10px; color:#96ffcc; margin-top:1px;
+  text-shadow:0 0 8px rgba(100,255,180,0.6);
 }
-#touch-freq button {
-  background:rgba(10,20,40,0.88); border:1px solid rgba(255,100,100,0.5);
-  color:#ff9696; font-family:monospace; font-size:18px;
-  width:44px; height:44px; border-radius:8px; cursor:pointer;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  text-shadow: 0 0 6px rgba(255,100,100,0.5);
+#hud-phi {
+  position:fixed; top:10px; right:14px; z-index:99;
+  font-size:9px; color:rgba(180,210,255,0.6); text-align:right;
+  text-shadow:0 0 6px rgba(100,160,255,0.4);
+  pointer-events:none;
+  transition: opacity 0.4s;
 }
-#touch-freq button:active { background:rgba(200,60,60,0.5); }
+
+/* ── Barra de frecuencia ── */
+#freqbar {
+  position:fixed; top:72px; left:50%; transform:translateX(-50%);
+  z-index:99; pointer-events:none; text-align:center;
+  font-size:9px; color:rgba(255,180,100,0.85);
+  text-shadow:0 0 6px rgba(255,130,80,0.6);
+  transition: opacity 0.4s;
+  white-space:nowrap;
+}
+#freqbar-track {
+  width:160px; height:5px; background:rgba(255,255,255,0.07);
+  border-radius:3px; margin:2px auto 0;
+  border:1px solid rgba(255,150,80,0.25);
+}
+#freqbar-fill {
+  height:100%; border-radius:3px;
+  background:linear-gradient(90deg,#4080ff,#ff6030);
+  transition: width 0.1s;
+}
+
+/* ── Panel inferior de botones ── */
+#controls {
+  position:fixed; bottom:0; left:0; right:0; z-index:99;
+  padding:10px 8px 16px;
+  background:linear-gradient(0deg,rgba(6,8,16,0.92)0%,rgba(6,8,16,0)100%);
+  transition: opacity 0.4s;
+}
+
+/* fila 1: botones de modo y acción */
+#btn-row1 {
+  display:flex; gap:6px; justify-content:center; margin-bottom:8px;
+}
+/* fila 2: sliders */
+#btn-row2 {
+  display:flex; gap:10px; align-items:center; justify-content:center;
+}
+
+.btn {
+  background:rgba(30,50,100,0.7);
+  border:1px solid rgba(100,160,255,0.4);
+  border-radius:8px;
+  color:#c8dcff;
+  font-family:monospace;
+  font-size:11px;
+  padding:10px 12px;
+  cursor:pointer;
+  user-select:none;
+  text-shadow:0 0 6px rgba(100,180,255,0.5);
+  box-shadow:0 0 8px rgba(60,120,255,0.15);
+  transition:background 0.15s, border-color 0.15s, transform 0.1s;
+  min-width:52px;
+  text-align:center;
+  -webkit-user-select:none;
+}
+.btn:active { background:rgba(60,100,200,0.85); transform:scale(0.94); border-color:rgba(150,200,255,0.8); }
+.btn.accent { border-color:rgba(255,200,80,0.6); color:#ffee88; }
+.btn.accent:active { background:rgba(120,80,20,0.7); }
+.btn.danger { border-color:rgba(255,80,80,0.5); color:#ff9999; }
+.btn.danger:active { background:rgba(120,20,20,0.7); }
+.btn.wide { min-width:90px; font-size:12px; letter-spacing:0.5px; }
+
+/* sliders táctiles */
+.slider-wrap {
+  display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; max-width:110px;
+}
+.slider-label {
+  font-size:9px; color:rgba(180,220,255,0.7); white-space:nowrap;
+}
+.slider-val {
+  font-size:10px; color:#aaffee; font-weight:bold;
+}
+input[type=range] {
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:4px;
+  background:rgba(255,255,255,0.12);
+  border-radius:2px; outline:none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; appearance:none;
+  width:20px; height:20px; border-radius:50%;
+  background:rgba(100,180,255,0.9);
+  border:2px solid rgba(200,230,255,0.8);
+  box-shadow:0 0 8px rgba(100,180,255,0.6);
+  cursor:pointer;
+}
+input[type=range].accent-slider::-webkit-slider-thumb {
+  background:rgba(255,180,60,0.9);
+  border-color:rgba(255,220,150,0.8);
+  box-shadow:0 0 8px rgba(255,160,40,0.6);
+}
+input[type=range].green-slider::-webkit-slider-thumb {
+  background:rgba(80,220,160,0.9);
+  border-color:rgba(160,255,200,0.8);
+  box-shadow:0 0 8px rgba(80,220,160,0.6);
+}
+
+/* hidden state */
+.ui-hidden { opacity:0 !important; pointer-events:none !important; }
+
+/* indicador de modo con color */
+#mode-dot {
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  margin-right:6px; vertical-align:middle;
+  box-shadow:0 0 6px currentColor;
+}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud">
-  <h2>REALIDAD HOLOGRÁFICA – Fibonacci &amp; Proporción Áurea</h2>
-  <div>ESPACIO: modo | R: rotación | S: timeline | C: limpiar | F: Fibonacci</div>
-  <div>+/-: frecuencia (Modo 3) | B: romper hilos | W: consciencia (Modo 4) | DRAG: orbitar | CLICK: pirámide</div>
-  <div id="mode">Modo: CAMPO HOLOGRÁFICO</div>
-  <div id="hover"></div>
-  <div id="freq" style="color:#ff9696;min-height:16px;text-shadow:0 0 8px rgba(255,100,100,0.6);"></div>
-  <div id="cons" style="color:#96ffcc;min-height:16px;text-shadow:0 0 8px rgba(100,255,180,0.6);"></div>
-</div>
-<div id="hud-r">34 líneas · φ = 1.618<br>Ángulo áureo 137.5°<br>Pirámides 4 lados</div>
 
-<!-- TOUCH UI: aparece solo en dispositivos táctiles -->
-<div id="touch-ui">
-  <div id="touch-top">
-    <button id="btn-modo">MODO</button>
-    <button id="btn-r">ROT ●</button>
-    <button id="btn-s">TL</button>
-    <button id="btn-f">FIB ●</button>
-    <button id="btn-c">CLR</button>
-    <button id="btn-b">BREAK</button>
-    <button id="btn-w">LIB</button>
+<!-- HUD superior -->
+<div id="hud-top">
+  <h2>REALIDAD HOLOGRÁFICA · φ=1.618</h2>
+  <div id="hud-mode"><span id="mode-dot"></span><span id="mode-txt">CAMPO HOLOGRÁFICO</span></div>
+  <div id="hud-palette"></div>
+  <div id="hud-cons"></div>
+</div>
+<div id="hud-phi">34 nodos<br>137.5°<br>Fib</div>
+
+<!-- Barra frecuencia -->
+<div id="freqbar">
+  FREC <span id="freqval">0.30</span>
+  <div id="freqbar-track"><div id="freqbar-fill" style="width:30%"></div></div>
+</div>
+
+<!-- Panel de controles táctiles -->
+<div id="controls">
+  <!-- Fila 1: acciones principales -->
+  <div id="btn-row1">
+    <button class="btn wide accent" id="btn-modo">MODO →</button>
+    <button class="btn" id="btn-rot">⟳ ROT</button>
+    <button class="btn" id="btn-s">⚡ TL</button>
+    <button class="btn" id="btn-fib">∿ FIB</button>
+    <button class="btn danger" id="btn-c">✕ CLR</button>
+    <button class="btn" id="btn-hud">👁 HUD</button>
   </div>
-  <div id="touch-freq">
-    <button id="btn-plus">+</button>
-    <button id="btn-minus">−</button>
+  <!-- Fila 2: sliders -->
+  <div id="btn-row2">
+    <div class="slider-wrap">
+      <div class="slider-label">FRECUENCIA</div>
+      <input type="range" id="sl-freq" class="accent-slider" min="0" max="100" value="30">
+      <div class="slider-val"><span id="sl-freq-val">0.30</span></div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-label">VELOCIDAD PART.</div>
+      <input type="range" id="sl-speed" min="1" max="20" value="5">
+      <div class="slider-val"><span id="sl-speed-val">0.5</span></div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-label">CANTIDAD PART.</div>
+      <input type="range" id="sl-density" class="green-slider" min="1" max="20" value="5">
+      <div class="slider-val"><span id="sl-density-val">0.5</span></div>
+    </div>
   </div>
 </div>
 
 <script>
-// ── REALIDAD HOLOGRÁFICA · Mobile + Visual Fix ────────────────
-// MEJORAS: partículas con glow radial, colores vivos, dots rellenos
+// ── REALIDAD HOLOGRÁFICA · Mobile ─────────────────────────────
 
 const C   = document.getElementById('c');
 const ctx = C.getContext('2d');
 
 const PHI = 1.618033988749895;
 const FIB = [1,1,2,3,5,8,13,21,34,55,89,144,233,377,610,987,1597,2584,4181,6765];
-const MODES = ["CAMPO HOLOGRÁFICO","PROYECCIÓN SELECCIONADA","PROYECCIÓN COMPLETA","MATRIZ EMOCIONAL","LIBERACIÓN"];
+const MODES = ["CAMPO HOLOGRÁFICO","PROYECCIÓN SEL.","PROYECCIÓN COMP.","MATRIZ EMOCIONAL","LIBERACIÓN"];
+const MODE_COLORS = ["#6699ff","#44bbff","#44ffaa","#ff5588","#ffcc44"];
 
-// ── resize ────────────────────────────────────────────────────
-function resize() {
-  C.width  = window.innerWidth;
-  C.height = window.innerHeight;
+const PALETTES = [
+  { hueShift:0,   sat:0.85, light:0.72, compress:1.0,  name:"Arcoiris Fibonacci"  },
+  { hueShift:200, sat:0.90, light:0.65, compress:0.35, name:"Azul Cuántico"        },
+  { hueShift:130, sat:0.95, light:0.62, compress:0.40, name:"Esmeralda Geométrica" },
+  { hueShift:320, sat:1.00, light:0.58, compress:0.45, name:"Rojo Emocional"       },
+  { hueShift:45,  sat:0.70, light:0.88, compress:0.30, name:"Dorado Transcendente" },
+];
+
+function paletteColor(fibIdx, pal) {
+  const baseHue=(fibIdx*137.5)%360;
+  const compressed=pal.hueShift+(baseHue-180)*pal.compress;
+  const h=((compressed%360)+360)%360;
+  return hslToRgb(h/360,pal.sat,pal.light);
 }
+
+function resize() { C.width=window.innerWidth; C.height=window.innerHeight; }
 resize();
 window.addEventListener('resize', resize);
 
-// ── state ─────────────────────────────────────────────────────
-let camY=0, camX=0.2, autoRot=true;
+// ── STATE ──────────────────────────────────────────────────────
+let camY=0, camX=0.25, autoRot=true;
 let dragOn=false, lastMX=0, lastMY=0;
-let mouseX=0, mouseY=0;
-let viewMode=0, emoFreq=0.3, matrixOn=true, consLv=0, glowI=1.0;
+let viewMode=1, emoFreq=0.3, matrixOn=true, consLv=0, glowI=1.0;  // arranca en modo pirámide
 let fibPh=0, frame=0;
-let selIdx=21, hovIdx=-1;
+let selIdx=8;  // FIB[8]=21 → radio=52.5 → siempre visible en pantalla
 let showFib=true;
+let partSpeed=0.5;
+let partDensity=0.5;
+let hudVisible=true;
 const emotions=[], mThreads=[], xPyrs=[];
 
-// ── timelines ─────────────────────────────────────────────────
-const TL = [];
-for (let i=0; i<34; i++) {
-  const angle  = i * Math.PI*2 / PHI;
-  const radius = FIB[Math.min(i,19)] * 2.5;
-  const hue    = (i*137.5)%360;
-  // FIX: más saturación y luminosidad para colores vivos
-  const [r,g,b] = hslToRgb(hue/360, 0.85, 0.72);
-  TL.push({
-    x: Math.cos(angle)*radius,
-    y: -150 + (Math.random()*80-40),
-    z: Math.sin(angle)*radius,
-    r, g, b,
-    fibIdx: i,
-    phase: Math.random()*Math.PI*2
-  });
+// ── TIMELINES ──────────────────────────────────────────────────
+const TL=[];
+for(let i=0;i<34;i++){
+  const angle=i*Math.PI*2/PHI;
+  const radius=FIB[Math.min(i,19)]*2.5;
+  const hue=(i*137.5)%360;
+  const [r,g,b]=hslToRgb(hue/360,0.85,0.72);
+  TL.push({ x:Math.cos(angle)*radius, y:-150+(Math.random()*80-40), z:Math.sin(angle)*radius,
+            r,g,b, tr:r,tg:g,tb:b, fibIdx:i, phase:Math.random()*Math.PI*2 });
 }
 
-// ── 3D projection ─────────────────────────────────────────────
-function project(x, y, z) {
-  const cosY=Math.cos(camY), sinY=Math.sin(camY);
-  let rx = x*cosY + z*sinY;
-  let rz =-x*sinY + z*cosY;
-  let ry = y;
-  const cosX=Math.cos(camX), sinX=Math.sin(camX);
-  let fy = ry*cosX - rz*sinX;
-  let fz = ry*sinX + rz*cosX;
-  let fx = rx;
-  const fov = 600;
-  const camDist = 900;
-  const dz = fz + camDist;
-  if (dz < 1) return null;
-  const scale = fov / dz;
-  return {
-    sx: C.width/2  + fx * scale,
-    sy: C.height/2 + fy * scale,
-    scale, depth: dz
-  };
-}
-
-// ── drawing helpers ───────────────────────────────────────────
-function line3(x1,y1,z1, x2,y2,z2) {
-  const p1=project(x1,y1,z1), p2=project(x2,y2,z2);
-  if (!p1||!p2) return;
-  ctx.beginPath();
-  ctx.moveTo(p1.sx, p1.sy);
-  ctx.lineTo(p2.sx, p2.sy);
-  ctx.stroke();
-}
-
-function circle3(x,y,z, r, strokeStyle, alpha, weight) {
-  const p=project(x,y,z);
-  if (!p) return;
-  const sr = r * p.scale;
-  if (sr < 0.5) return;
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-  ctx.strokeStyle = strokeStyle;
-  ctx.lineWidth   = weight;
-  ctx.beginPath();
-  ctx.arc(p.sx, p.sy, sr, 0, Math.PI*2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-}
-
-// FIX: dot3 ahora rellena en lugar de trazar contorno
-function dot3(x,y,z, r, col, alpha) {
-  const p=project(x,y,z);
-  if (!p) return;
-  const sr=r*p.scale;
-  if (sr<0.3) return;
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-  ctx.fillStyle = col;
-  ctx.beginPath();
-  ctx.arc(p.sx, p.sy, Math.max(0.8,sr), 0, Math.PI*2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-}
-
-// FIX: Nueva función glow radial para partículas emocionales
-function glowDot3(x,y,z, r, cr,cg,cb, alpha) {
-  const p=project(x,y,z);
-  if (!p) return;
-  const sr = Math.max(1, r*p.scale);
-  if (sr < 0.5) return;
-  const px = p.sx, py = p.sy;
-
-  // Halo exterior suave
-  const grad = ctx.createRadialGradient(px, py, 0, px, py, sr*3.5);
-  grad.addColorStop(0,   `rgba(${cr|0},${cg|0},${cb|0},${Math.min(1, alpha)})`);
-  grad.addColorStop(0.3, `rgba(${cr|0},${cg|0},${cb|0},${Math.min(1, alpha*0.6)})`);
-  grad.addColorStop(1,   `rgba(${cr|0},${cg|0},${cb|0},0)`);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(px, py, sr*3.5, 0, Math.PI*2);
-  ctx.fill();
-
-  // Núcleo sólido brillante
-  ctx.globalAlpha = Math.min(1, alpha*1.4);
-  ctx.fillStyle = `rgb(${Math.min(255,(cr|0)+60)},${Math.min(255,(cg|0)+60)},${Math.min(255,(cb|0)+60)})`;
-  ctx.beginPath();
-  ctx.arc(px, py, Math.max(0.8, sr*0.6), 0, Math.PI*2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-}
-
-function setStroke(r,g,b,a,w) {
-  ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${Math.max(0,Math.min(1,a/255))})`;
-  ctx.lineWidth   = w;
-  ctx.globalAlpha = 1;
-}
-
-function stroke3(x1,y1,z1, x2,y2,z2, r,g,b,a,w) {
-  const p1=project(x1,y1,z1), p2=project(x2,y2,z2);
-  if (!p1||!p2) return;
-  ctx.strokeStyle = `rgba(${r|0},${g|0},${b|0},${Math.max(0,Math.min(1,a/255))})`;
-  ctx.lineWidth   = w;
-  ctx.beginPath();
-  ctx.moveTo(p1.sx, p1.sy);
-  ctx.lineTo(p2.sx, p2.sy);
-  ctx.stroke();
-}
-
-// ── MAIN LOOP ─────────────────────────────────────────────────
-function loop() {
-  requestAnimationFrame(loop);
-  frame++;
-  fibPh += 0.02;
-  if (autoRot) camY += 0.003;
-
-  // FIX: trail suave en lugar de clearRect puro
-  ctx.fillStyle = 'rgba(6,8,16,0.88)';
-  ctx.fillRect(0,0,C.width,C.height);
-
-  hovIdx=-1;
-  let minD=40;
-  for (let i=0;i<TL.length;i++) {
-    const p=project(TL[i].x, TL[i].y, TL[i].z);
-    if (!p) continue;
-    const d=Math.hypot(p.sx-mouseX, p.sy-mouseY);
-    if (d<minD) { hovIdx=i; minD=d; }
+function updatePaletteTargets(){
+  const pal=PALETTES[viewMode];
+  for(let i=0;i<TL.length;i++){
+    const [tr,tg,tb]=paletteColor(TL[i].fibIdx,pal);
+    TL[i].tr=tr; TL[i].tg=tg; TL[i].tb=tb;
   }
-  glowI += ((hovIdx>=0?3.5:1.0)-glowI)*0.15;
-
-  if (showFib) drawSpirals();
-
-  if      (viewMode===0) modeField();
-  else if (viewMode===1) modeSel(0.5);
-  else if (viewMode===2) modeFull();
-  else if (viewMode===3) modeMatrix();
-  else if (viewMode===4) modeLiberation();
-
-  drawExtras();
-  drawParticles();
-  drawThreads();
-  updateHUD();
 }
 
-// ── MODES ─────────────────────────────────────────────────────
-function modeField() {
-  for (let i=0;i<TL.length;i++) {
-    const t=TL[i], hov=(i===hovIdx);
-    for (let j=i+1;j<TL.length;j++) {
+// ── PROJECTION ─────────────────────────────────────────────────
+function project(x,y,z){
+  const cosY=Math.cos(camY),sinY=Math.sin(camY);
+  let rx=x*cosY+z*sinY,rz=-x*sinY+z*cosY,ry=y;
+  const cosX=Math.cos(camX),sinX=Math.sin(camX);
+  let fy=ry*cosX-rz*sinX,fz=ry*sinX+rz*cosX,fx=rx;
+  const dz=fz+900; if(dz<1) return null;
+  const scale=600/dz;
+  return { sx:C.width/2+fx*scale, sy:C.height/2+fy*scale, scale, depth:dz };
+}
+
+// ── DRAW HELPERS ───────────────────────────────────────────────
+function dot3(x,y,z,r,col,alpha){
+  const p=project(x,y,z); if(!p) return;
+  const sr=r*p.scale; if(sr<0.3) return;
+  ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.arc(p.sx,p.sy,Math.max(0.8,sr),0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+function glowDot3(x,y,z,r,cr,cg,cb,alpha){
+  const p=project(x,y,z); if(!p) return;
+  const sr=Math.max(1,r*p.scale); if(sr<0.5) return;
+  const px=p.sx,py=p.sy;
+  const grad=ctx.createRadialGradient(px,py,0,px,py,sr*3);
+  grad.addColorStop(0,  `rgba(${cr|0},${cg|0},${cb|0},${Math.min(1,alpha)})`);
+  grad.addColorStop(0.4,`rgba(${cr|0},${cg|0},${cb|0},${Math.min(1,alpha*0.5)})`);
+  grad.addColorStop(1,  `rgba(${cr|0},${cg|0},${cb|0},0)`);
+  ctx.globalAlpha=1; ctx.fillStyle=grad;
+  ctx.beginPath(); ctx.arc(px,py,sr*3,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=Math.min(1,alpha*1.3);
+  ctx.fillStyle=`rgb(${Math.min(255,(cr|0)+50)},${Math.min(255,(cg|0)+50)},${Math.min(255,(cb|0)+50)})`;
+  ctx.beginPath(); ctx.arc(px,py,Math.max(0.8,sr*0.55),0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+function stroke3(x1,y1,z1,x2,y2,z2,r,g,b,a,w){
+  const p1=project(x1,y1,z1),p2=project(x2,y2,z2); if(!p1||!p2) return;
+  ctx.strokeStyle=`rgba(${r|0},${g|0},${b|0},${Math.max(0,Math.min(1,a/255))})`;
+  ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
+}
+
+// ── LOOP ───────────────────────────────────────────────────────
+function loop(){
+  requestAnimationFrame(loop);
+  frame++; fibPh+=0.018;
+  if(autoRot) camY+=0.003;
+  ctx.fillStyle='rgba(6,8,16,0.88)'; ctx.fillRect(0,0,C.width,C.height);
+
+  glowI+=(1.0-glowI)*0.12;
+
+  // Palette lerp
+  const LERP=0.022;
+  for(let i=0;i<TL.length;i++){
+    TL[i].r+=(TL[i].tr-TL[i].r)*LERP;
+    TL[i].g+=(TL[i].tg-TL[i].g)*LERP;
+    TL[i].b+=(TL[i].tb-TL[i].b)*LERP;
+  }
+
+  if(showFib) drawSpirals();
+  if     (viewMode===0) modeField();
+  else if(viewMode===1) modeSel(0.5);
+  else if(viewMode===2) modeFull();
+  else if(viewMode===3) modeMatrix();
+  else if(viewMode===4) modeLiberation();
+
+  drawExtras(); drawParticles(); drawThreads(); updateHUD();
+}
+
+// ── MODES ──────────────────────────────────────────────────────
+function modeField(){
+  const connMult=map(emoFreq,0,1,1.0,4.5);
+  for(let i=0;i<TL.length;i++){
+    const t=TL[i];
+    for(let j=i+1;j<TL.length;j++){
       const o=TL[j];
       const d=Math.hypot(t.x-o.x,t.y-o.y,t.z-o.z);
-      const cd=FIB[t.fibIdx%20]*3;
-      if (d<cd) {
-        // FIX: alpha mucho más alto (era 28, ahora 110) y colores mezclados
-        const a=((1-d/cd)*110)*(hov?2.5:1);
-        const mr=(t.r+o.r)/2, mg=(t.g+o.g)/2, mb=(t.b+o.b)/2;
-        stroke3(t.x,t.y,t.z, o.x,o.y,o.z, mr,mg,mb, a, hov?1.5:0.7);
+      const cd=FIB[t.fibIdx%20]*3*connMult;
+      if(d<cd){
+        const a=(1-d/cd)*100;
+        stroke3(t.x,t.y,t.z,o.x,o.y,o.z,(t.r+o.r)/2,(t.g+o.g)/2,(t.b+o.b)/2,a,0.6);
       }
     }
-    drawTL(t, hov, 1.0);
+    drawTL(t,false,1.0);
   }
   drawTLSel(TL[selIdx]);
-  if (hovIdx>=0 && frame%3===0) spawnPart(TL[hovIdx], false);
-  if (frame%18===0) spawnPart(TL[Math.floor(Math.random()*TL.length)], false);
+  const fldInt=Math.max(1,Math.round(22/partDensity));
+  if(frame%fldInt===0) spawnPart(TL[Math.floor(Math.random()*TL.length)],false);
 }
 
-function modeSel(comp) {
-  for (let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],i===hovIdx,0.2);
+function modeSel(comp){
+  for(let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],false,0.2);
   drawTLSel(TL[selIdx]);
-  drawPyramidFromTL(TL[selIdx], comp);
-  if (frame%15===0) spawnPart(TL[selIdx], false);
+  drawPyramidFromTL(TL[selIdx],comp);
+  if(frame%18===0) spawnPart(TL[selIdx],false);
+  const si=Math.max(2,Math.round(map(emoFreq,0,1,16,3)/partDensity));
+  if(frame%si===0) spawnPyramidEdgeParts(TL[selIdx],comp);
 }
 
-function modeFull() {
-  for (let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],i===hovIdx,0.1);
+function modeFull(){
+  for(let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],false,0.1);
   drawTLSel(TL[selIdx]);
-  drawPyramidFromTL(TL[selIdx], 1.0);
+  drawPyramidFromTL(TL[selIdx],1.0);
   drawGrid(TL[selIdx]);
-  if (frame%6===0) spawnPart(TL[selIdx], false);
+  const si1=Math.max(2,Math.round(map(emoFreq,0,1,14,3)/partDensity));
+  const si2=Math.max(2,Math.round(map(emoFreq,0,1,12,3)/partDensity));
+  if(frame%si1===0) spawnPart(TL[selIdx],false);
+  if(frame%si2===0) spawnPyramidEdgeParts(TL[selIdx],1.0);
 }
 
-function modeMatrix() {
-  for (let i=0;i<TL.length;i++) drawTL(TL[i],i===hovIdx,0.1);
+function modeMatrix(){
+  for(let i=0;i<TL.length;i++) drawTL(TL[i],false,0.1);
   drawTLSel(TL[selIdx]);
-  drawPyramidFromTL(TL[selIdx], 1.0);
-  if (matrixOn && frame%10===0 && mThreads.length<89) {
+  drawPyramidFromTL(TL[selIdx],1.0);
+  const maxHilos=Math.round(map(emoFreq,0,1,12,55));
+  const spawnInt=Math.max(4,Math.round(map(emoFreq,0,1,22,5)));
+  if(matrixOn&&frame%spawnInt===0&&mThreads.length<maxHilos){
     const a=Math.random()*Math.PI*2;
-    const fr=map(emoFreq,0,1,255,120), fg=map(emoFreq,0,1,80,120), fb=map(emoFreq,0,1,80,200);
+    const fr=map(emoFreq,0,1,255,120),fg=map(emoFreq,0,1,80,120),fb=map(emoFreq,0,1,80,200);
     mThreads.push({
-      sx:Math.cos(a)*600, sy:Math.random()*400-200, sz:Math.sin(a)*600,
-      ex:TL[selIdx].x+(Math.random()-.5)*80, ey:200, ez:TL[selIdx].z+(Math.random()-.5)*80,
-      prog:0, breaking:false, r:fr, g:fg, b:fb
+      sx:Math.cos(a)*600,sy:Math.random()*400-200,sz:Math.sin(a)*600,
+      ex:TL[selIdx].x+(Math.random()-.5)*80,ey:200,ez:TL[selIdx].z+(Math.random()-.5)*80,
+      prog:0,breaking:false,r:fr,g:fg,b:fb
     });
   }
-  if (frame%4===0) spawnPart(TL[selIdx], true);
+  const si=Math.max(2,Math.round(map(emoFreq,0,1,10,3)/partDensity));
+  if(frame%5===0) spawnPart(TL[selIdx],true);
+  if(frame%si===0) spawnPyramidEdgeParts(TL[selIdx],1.0);
 }
 
-function modeLiberation() {
-  consLv=Math.min(1,consLv+.004);
-  for (let i=0;i<TL.length;i++) {
-    if (i===selIdx) continue;
-    const t=TL[i], hov=(i===hovIdx);
-    // FIX: alpha más visible en modo liberación
-    dot3(t.x,t.y,t.z, (3+consLv*2)*(hov?1.5:1), `rgba(180,220,255,1)`, consLv*0.65*(hov?2:1));
+function modeLiberation(){
+  const growSpeed=map(emoFreq,0,1,0.001,0.009);
+  consLv=Math.min(1,consLv+growSpeed);
+  for(let i=0;i<TL.length;i++){
+    if(i===selIdx) continue;
+    const t=TL[i];
+    dot3(t.x,t.y,t.z,3+consLv*2,`rgba(180,220,255,1)`,consLv*0.6);
   }
   drawTLSel(TL[selIdx]);
-  drawPyramidFromTL(TL[selIdx], 1-consLv*.7);
+  drawPyramidFromTL(TL[selIdx],1-consLv*.7);
   matrixOn=false;
-  for (const m of mThreads) m.breaking=true;
-  if (frame%7===0) spawnPart(TL[Math.floor(Math.random()*TL.length)], false);
+  for(const m of mThreads) m.breaking=true;
+  const li1=Math.max(2,Math.round(9/partDensity));
+  const li2=Math.max(2,Math.round(12/partDensity));
+  if(frame%li1===0) spawnPart(TL[Math.floor(Math.random()*TL.length)],false);
+  if(frame%li2===0) spawnPyramidEdgeParts(TL[selIdx],1.0-consLv*0.7);
   drawConSphere(consLv);
 }
 
-function drawConSphere(lv) {
-  if (lv < 0.05) return;
-  const R = lv * 700;
-  const segs = 24;
-  // FIX: alpha más visible
-  const a = lv * 0.55;
-  ctx.strokeStyle = `rgba(180,255,230,${a})`;
-  ctx.lineWidth = 1.2;
-  for (let lat = -80; lat <= 80; lat += 20) {
-    const phi = lat * Math.PI / 180;
-    const r2 = R * Math.cos(phi);
-    const y  = R * Math.sin(phi);
-    const pts = [];
-    for (let i = 0; i <= segs; i++) {
-      const theta = (i / segs) * Math.PI * 2;
-      const p = project(Math.cos(theta) * r2, y, Math.sin(theta) * r2);
-      if (p) pts.push(p);
+// ── ESFERA ─────────────────────────────────────────────────────
+function drawConSphere(lv){
+  if(lv<0.05) return;
+  const R=lv*700, segs=32; // reducido para mobile
+
+  for(let lat=-80;lat<=80;lat+=15){
+    const phi=lat*Math.PI/180,r2=R*Math.cos(phi),y=R*Math.sin(phi);
+    const intensity=1-Math.abs(lat)/90,a=lv*(0.3+intensity*0.3);
+    ctx.strokeStyle=`rgba(180,255,230,${a})`; ctx.lineWidth=0.7+intensity*0.5;
+    const pts=[];
+    for(let i=0;i<=segs;i++){
+      const theta=(i/segs)*Math.PI*2;
+      const p=project(Math.cos(theta)*r2,y,Math.sin(theta)*r2); if(p) pts.push(p);
     }
-    if (pts.length < 2) continue;
-    ctx.beginPath(); ctx.moveTo(pts[0].sx, pts[0].sy);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
-    ctx.stroke();
+    if(pts.length<2) continue;
+    ctx.beginPath(); ctx.moveTo(pts[0].sx,pts[0].sy);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy); ctx.stroke();
   }
-  for (let lon = 0; lon < 360; lon += 30) {
-    const theta = lon * Math.PI / 180;
-    const pts = [];
-    for (let i = 0; i <= segs; i++) {
-      const phi = (i / segs - 0.5) * Math.PI;
-      const p = project(R * Math.cos(phi) * Math.cos(theta), R * Math.sin(phi), R * Math.cos(phi) * Math.sin(theta));
-      if (p) pts.push(p);
+  for(let lon=0;lon<360;lon+=20){
+    const theta=lon*Math.PI/180,a=lv*0.35;
+    ctx.strokeStyle=`rgba(180,255,230,${a})`; ctx.lineWidth=0.6;
+    const pts=[];
+    for(let i=0;i<=segs;i++){
+      const phi=(i/segs-0.5)*Math.PI;
+      const p=project(R*Math.cos(phi)*Math.cos(theta),R*Math.sin(phi),R*Math.cos(phi)*Math.sin(theta));
+      if(p) pts.push(p);
     }
-    if (pts.length < 2) continue;
-    ctx.beginPath(); ctx.moveTo(pts[0].sx, pts[0].sy);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
-    ctx.stroke();
+    if(pts.length<2) continue;
+    ctx.beginPath(); ctx.moveTo(pts[0].sx,pts[0].sy);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy); ctx.stroke();
   }
-  for (let i = 0; i < 5; i++) {
-    const pulse = (fibPh + i * Math.PI * 2 / 5) % (Math.PI * 2);
-    const pr = Math.abs(Math.sin(pulse)) * FIB[i+3] * 8 + R;
-    // FIX: pulsos Fibonacci más visibles
-    const pa = (1 - pulse / (Math.PI*2)) * lv * 0.4;
-    ctx.strokeStyle = `rgba(200,255,180,${pa})`;
-    ctx.lineWidth = 1.2;
-    const pts2 = [];
-    for (let j = 0; j <= segs; j++) {
-      const theta = (j / segs) * Math.PI * 2;
-      const p = project(Math.cos(theta) * pr, 0, Math.sin(theta) * pr);
-      if (p) pts2.push(p);
+  for(let tilt=45;tilt<=135;tilt+=45){
+    const tiltR=tilt*Math.PI/180,a=lv*0.2;
+    ctx.strokeStyle=`rgba(140,220,255,${a})`; ctx.lineWidth=0.5;
+    const pts=[];
+    for(let i=0;i<=segs;i++){
+      const theta=(i/segs)*Math.PI*2;
+      const p=project(R*Math.cos(theta),R*Math.sin(theta)*Math.cos(tiltR),R*Math.sin(theta)*Math.sin(tiltR));
+      if(p) pts.push(p);
     }
-    if (pts2.length < 2) continue;
-    ctx.beginPath(); ctx.moveTo(pts2[0].sx, pts2[0].sy);
-    for (let j = 1; j < pts2.length; j++) ctx.lineTo(pts2[j].sx, pts2[j].sy);
-    ctx.stroke();
+    if(pts.length<2) continue;
+    ctx.beginPath(); ctx.moveTo(pts[0].sx,pts[0].sy);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy); ctx.stroke();
+  }
+  for(let i=0;i<6;i++){
+    const pulse=(fibPh+i*Math.PI*2/6)%(Math.PI*2);
+    const pr=Math.abs(Math.sin(pulse))*FIB[i+3]*8+R;
+    const pa=(1-pulse/(Math.PI*2))*lv*0.4;
+    ctx.strokeStyle=`rgba(200,255,180,${pa})`; ctx.lineWidth=0.8;
+    const pts2=[];
+    for(let j=0;j<=segs;j++){
+      const theta=(j/segs)*Math.PI*2;
+      const p=project(Math.cos(theta)*pr,0,Math.sin(theta)*pr); if(p) pts2.push(p);
+    }
+    if(pts2.length<2) continue;
+    ctx.beginPath(); ctx.moveTo(pts2[0].sx,pts2[0].sy);
+    for(let j=1;j<pts2.length;j++) ctx.lineTo(pts2[j].sx,pts2[j].sy); ctx.stroke();
   }
 }
 
-// ── DRAW HELPERS ──────────────────────────────────────────────
-function drawTL(t, hov, fade) {
+// ── DRAW HELPERS ───────────────────────────────────────────────
+function drawTL(t,hov,fade){
   const pulse=Math.sin(frame*.05+t.phase)*.3+.7;
-  const pm=hov?pulse*1.8:pulse;
   const bs=FIB[Math.min(t.fibIdx%8,7)]*.3;
-  const sz=(bs+4)*(hov?1.5:1);
-  // FIX: alpha base más alto
-  const a1=220*pm*fade*(hov?1.5:1);
-  const a2=130*pm*fade*(hov?2:1);
-  // FIX: usar glowDot3 para halo visible
-  glowDot3(t.x,t.y,t.z, sz*.6, t.r,t.g,t.b, a1/255);
-  const ring=(bs*6+18)*(hov?1.3:1);
-  drawRing3(t.x,t.y,t.z, ring*.5, t.r,t.g,t.b, a2, hov?.9:.5, frame*.02);
+  const sz=(bs+4);
+  glowDot3(t.x,t.y,t.z,sz*.55,t.r,t.g,t.b,(200*pulse*fade)/255);
+  drawRing3(t.x,t.y,t.z,(bs*6+18)*.45,t.r,t.g,t.b,100*pulse*fade,.45,frame*.02);
 }
 
-function drawRing3(cx,cy,cz, r, cr,cg,cb, a, w, tiltY) {
-  const pts=[];
-  const segs=24;
-  for (let i=0;i<=segs;i++) {
+function drawRing3(cx,cy,cz,r,cr,cg,cb,a,w,tiltY){
+  const pts=[],segs=16;
+  for(let i=0;i<=segs;i++){
     const a2=i/segs*Math.PI*2;
-    const lx=Math.cos(a2+tiltY)*r;
-    const lz=Math.sin(a2+tiltY)*r;
-    const p=project(cx+lx, cy, cz+lz);
-    if (p) pts.push(p);
+    const p=project(cx+Math.cos(a2+tiltY)*r,cy,cz+Math.sin(a2+tiltY)*r); if(p) pts.push(p);
   }
-  if (pts.length<2) return;
-  ctx.strokeStyle=`rgba(${cr|0},${cg|0},${cb|0},${a/255})`;
-  ctx.lineWidth=w;
-  ctx.beginPath();
-  ctx.moveTo(pts[0].sx,pts[0].sy);
-  for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy);
-  ctx.stroke();
+  if(pts.length<2) return;
+  ctx.strokeStyle=`rgba(${cr|0},${cg|0},${cb|0},${a/255})`; ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(pts[0].sx,pts[0].sy);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy); ctx.stroke();
 }
 
-function drawTLSel(t) {
+function drawTLSel(t){
   const pulse=Math.sin(frame*.08)*.5+1;
-  // FIX: nodo seleccionado con glow
-  glowDot3(t.x,t.y,t.z, 5*pulse, 255,255,180, 1.0);
-  for (let i=0;i<5;i++) {
-    const rr=FIB[i+3]*2*.5;
-    drawRing3(t.x,t.y,t.z, rr, 255,255,150, 180, 1.2, frame*.03+i*Math.PI/5);
-  }
+  glowDot3(t.x,t.y,t.z,5*pulse,255,255,180,1.0);
+  for(let i=0;i<4;i++) drawRing3(t.x,t.y,t.z,FIB[i+3]*2*.5,255,255,150,170,1.1,frame*.03+i*Math.PI/4);
 }
 
-function drawPyramidFromTL(t, comp) {
-  drawPyramid(t.x,t.y,t.z, t.x,t.z, 120*PHI, comp, 180,200,255, 200);
+function drawPyramidFromTL(t,comp){
+  drawPyramid(t.x,t.y,t.z,t.x,t.z,120*PHI,comp,180,200,255,200);
 }
 
-function drawPyramid(ax,ay,az, bx,bz, bs, comp, r,g,b, alpha) {
+function drawPyramid(ax,ay,az,bx,bz,bs,comp,r,g,b,alpha){
   const base_y=200;
-  const corners=[
-    [bx-bs,base_y,bz-bs],[bx+bs,base_y,bz-bs],
-    [bx+bs,base_y,bz+bs],[bx-bs,base_y,bz+bs]
-  ];
-  const av=corners.map(v=>[
-    ax+(v[0]-ax)*comp,
-    ay+(v[1]-ay)*comp,
-    az+(v[2]-az)*comp
-  ]);
-  // FIX: alpha de pirámide más visible
-  const a=(alpha/255)*glowI*.95;
-  ctx.strokeStyle=`rgba(${r|0},${g|0},${b|0},${Math.min(1,a)})`;
-  ctx.lineWidth=1.8;
-  for (const v of av) {
-    const p1=project(ax,ay,az), p2=project(v[0],v[1],v[2]);
-    if (!p1||!p2) continue;
+  const corners=[[bx-bs,base_y,bz-bs],[bx+bs,base_y,bz-bs],[bx+bs,base_y,bz+bs],[bx-bs,base_y,bz+bs]];
+  const av=corners.map(v=>[ax+(v[0]-ax)*comp,ay+(v[1]-ay)*comp,az+(v[2]-az)*comp]);
+  const a=(alpha/255)*glowI*.9;
+  ctx.strokeStyle=`rgba(${r|0},${g|0},${b|0},${Math.min(1,a)})`; ctx.lineWidth=1.5;
+  for(const v of av){
+    const p1=project(ax,ay,az),p2=project(v[0],v[1],v[2]); if(!p1||!p2) continue;
     ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
   }
-  for (let i=0;i<4;i++) {
+  for(let i=0;i<4;i++){
     const n=(i+1)%4;
-    const p1=project(av[i][0],av[i][1],av[i][2]);
-    const p2=project(av[n][0],av[n][1],av[n][2]);
-    if (!p1||!p2) continue;
+    const p1=project(av[i][0],av[i][1],av[i][2]),p2=project(av[n][0],av[n][1],av[n][2]);
+    if(!p1||!p2) continue;
     ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
   }
-  if (comp>.3) {
-    for (let k=1;k<8;k++) {
-      const t2=k/8;
-      const ps=av.map(v=>[ax+(v[0]-ax)*t2, ay+(v[1]-ay)*t2, az+(v[2]-az)*t2]);
-      // FIX: secciones internas más visibles
-      ctx.strokeStyle=`rgba(220,200,255,${map(t2,0,1,.08,.22)*comp})`;
-      ctx.lineWidth=.7;
-      for (let i=0;i<4;i++) {
+  const pSpeed=map(emoFreq,0,1,0.005,0.018)*partSpeed;
+  const ph=(frame*pSpeed)%1.0,ph2=(frame*pSpeed*1.2+0.5)%1.0;
+  for(let i=0;i<4;i++){
+    for(let k=0;k<3;k++){
+      const t2=(ph+k/3)%1.0;
+      glowDot3(ax+(av[i][0]-ax)*t2,ay+(av[i][1]-ay)*t2,az+(av[i][2]-az)*t2,5,0,230,255,Math.sin(t2*Math.PI)*0.9);
+    }
+  }
+  for(let i=0;i<4;i++){
+    const c1=av[i],c2=av[(i+1)%4];
+    for(let k=0;k<2;k++){
+      const t2=(ph2+k*0.5)%1.0;
+      glowDot3(c1[0]+(c2[0]-c1[0])*t2,c1[1]+(c2[1]-c1[1])*t2,c1[2]+(c2[2]-c1[2])*t2,3.5,0,230,255,Math.sin(t2*Math.PI)*0.8);
+    }
+  }
+  if(comp>.3){
+    for(let k=1;k<6;k++){
+      const t2=k/6;
+      const ps=av.map(v=>[ax+(v[0]-ax)*t2,ay+(v[1]-ay)*t2,az+(v[2]-az)*t2]);
+      ctx.strokeStyle=`rgba(220,200,255,${map(t2,0,1,.06,.18)*comp})`; ctx.lineWidth=.6;
+      for(let i=0;i<4;i++){
         const ni=(i+1)%4;
-        const p1=project(ps[i][0],ps[i][1],ps[i][2]);
-        const p2=project(ps[ni][0],ps[ni][1],ps[ni][2]);
-        if (!p1||!p2) continue;
+        const p1=project(ps[i][0],ps[i][1],ps[i][2]),p2=project(ps[ni][0],ps[ni][1],ps[ni][2]);
+        if(!p1||!p2) continue;
         ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
       }
     }
   }
 }
 
-function drawGrid(t) {
-  // FIX: grilla más visible
-  for (let i=-10;i<=10;i++) {
-    stroke3(t.x-300,200,t.z+i*30, t.x+300,200,t.z+i*30, 120,180,230,55,.6);
-    stroke3(t.x+i*30,200,t.z-300, t.x+i*30,200,t.z+300, 120,180,230,55,.6);
+function drawGrid(t){
+  for(let i=-8;i<=8;i++){
+    stroke3(t.x-240,200,t.z+i*30,t.x+240,200,t.z+i*30,120,180,230,40,.5);
+    stroke3(t.x+i*30,200,t.z-240,t.x+i*30,200,t.z+240,120,180,230,40,.5);
   }
 }
 
-function drawSpirals() {
-  // FIX: colores más saturados, alpha 0.30 → 0.65
-  const cols=[[120,180,255],[80,230,240],[210,160,255]];
-  for (let s=0;s<3;s++) {
-    const off=s*Math.PI*2/3;
-    const pts=[];
-    for (let i=0;i<100;i++) {
-      const a=i*Math.PI*2/PHI;
-      const r=FIB[Math.min(i%13,12)]*2;
-      const lx=Math.cos(a)*r;
-      const lz=Math.sin(a)*r;
-      const ly=Math.sin(a*PHI)*50;
-      const rx=lx*Math.cos(fibPh*.3+off) + lz*Math.sin(fibPh*.3+off);
-      const rz=-lx*Math.sin(fibPh*.3+off)+ lz*Math.cos(fibPh*.3+off);
-      const p=project(rx, ly*Math.cos(fibPh*.2)-rz*Math.sin(fibPh*.2), ly*Math.sin(fibPh*.2)+rz*Math.cos(fibPh*.2));
-      if (p) pts.push(p);
+function drawSpirals(){
+  const pal=PALETTES[viewMode];
+  const spiralHues=[
+    ((pal.hueShift      )%360+360)%360,
+    ((pal.hueShift+120  )%360+360)%360,
+    ((pal.hueShift+240  )%360+360)%360,
+  ];
+  const cols=spiralHues.map(h=>hslToRgb(h/360,Math.min(1,pal.sat+0.05),Math.min(1,pal.light+0.1)));
+  for(let s=0;s<3;s++){
+    const off=s*Math.PI*2/3,pts=[];
+    for(let i=0;i<70;i++){
+      const a=i*Math.PI*2/PHI,r=FIB[Math.min(i%13,12)]*2;
+      const lx=Math.cos(a)*r,lz=Math.sin(a)*r,ly=Math.sin(a*PHI)*50;
+      const rx=lx*Math.cos(fibPh*.3+off)+lz*Math.sin(fibPh*.3+off);
+      const rz=-lx*Math.sin(fibPh*.3+off)+lz*Math.cos(fibPh*.3+off);
+      const p=project(rx,ly*Math.cos(fibPh*.2)-rz*Math.sin(fibPh*.2),ly*Math.sin(fibPh*.2)+rz*Math.cos(fibPh*.2));
+      if(p) pts.push(p);
     }
-    if (pts.length<2) continue;
-    ctx.strokeStyle=`rgba(${cols[s][0]},${cols[s][1]},${cols[s][2]},0.65)`;
-    ctx.lineWidth=1.5;
-    ctx.beginPath();
-    ctx.moveTo(pts[0].sx,pts[0].sy);
-    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy);
-    ctx.stroke();
+    if(pts.length<2) continue;
+    const [cr,cg,cb]=cols[s];
+    ctx.strokeStyle=`rgba(${cr|0},${cg|0},${cb|0},0.55)`; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(pts[0].sx,pts[0].sy);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy); ctx.stroke();
   }
 }
 
-function drawExtras() {
-  for (let i=xPyrs.length-1;i>=0;i--) {
-    const ep=xPyrs[i];
-    ep.comp=Math.min(1,ep.comp+ep.speed);
-    ep.life--;
-    if (ep.life<=0) { xPyrs.splice(i,1); continue; }
-    const af=ep.life/ep.maxLife;
-    drawPyramid(ep.ax,ep.ay,ep.az, ep.bx,ep.bz, ep.bs*ep.comp, af*.9, ep.r,ep.g,ep.b, 200);
+function drawExtras(){
+  for(let i=xPyrs.length-1;i>=0;i--){
+    const ep=xPyrs[i]; ep.comp=Math.min(1,ep.comp+ep.speed); ep.life--;
+    if(ep.life<=0){ xPyrs.splice(i,1); continue; }
+    drawPyramid(ep.ax,ep.ay,ep.az,ep.bx,ep.bz,ep.bs*ep.comp,(ep.life/ep.maxLife)*.85,ep.r,ep.g,ep.b,190);
   }
 }
 
-// FIX PRINCIPAL: partículas con glowDot3 y alpha real
-function drawParticles() {
-  for (let i=emotions.length-1;i>=0;i--) {
+function drawParticles(){
+  // cap para performance mobile
+  const maxPart=120;
+  if(emotions.length>maxPart) emotions.splice(0, emotions.length-maxPart);
+  for(let i=emotions.length-1;i>=0;i--){
     const e=emotions[i];
-    e.vx+=(Math.sin(e.x*.01+frame*.01+33)*.5+.5-.5)*(e.ctrl?.2:.5);
-    e.vy+=e.ctrl?.15:-.03;
-    e.vz+=(Math.sin(e.z*.01+frame*.01+77)*.5+.5-.5)*(e.ctrl?.2:.5);
-    e.vx*=e.ctrl?.95:.98; e.vy*=e.ctrl?.95:.98; e.vz*=e.ctrl?.95:.98;
-    e.x+=e.vx; e.y+=e.vy; e.z+=e.vz;
-    e.life--; e.sz+=.08;
-    if (e.life<=0) { emotions.splice(i,1); continue; }
-    // FIX: alpha sin multiplicar por 0.7, llega a 1.0 real
-    const lifeRatio = e.life / e.maxLife;
-    const a = Math.min(1.0, lifeRatio * 1.4);
-    glowDot3(e.x,e.y,e.z, e.sz, e.r,e.g,e.b, a);
+    if(e.onEdge){
+      e.edgeT=Math.min(1,e.edgeT+e.edgeSpeed);
+      e.x=e.x0+(e.x1-e.x0)*e.edgeT; e.y=e.y0+(e.y1-e.y0)*e.edgeT; e.z=e.z0+(e.z1-e.z0)*e.edgeT;
+      e.life--;
+      if(e.edgeT>=1||e.life<=0){ emotions.splice(i,1); continue; }
+      glowDot3(e.x,e.y,e.z,e.sz,e.r,e.g,e.b,Math.min(1,(e.life/e.maxLife)*1.7));
+    } else {
+      e.vx+=(Math.sin(e.x*.01+frame*.01+33)*.5+.5-.5)*(e.ctrl?.2:.5);
+      e.vy+=e.ctrl?.14:-.025;
+      e.vz+=(Math.sin(e.z*.01+frame*.01+77)*.5+.5-.5)*(e.ctrl?.2:.5);
+      e.vx*=e.ctrl?.95:.98; e.vy*=e.ctrl?.95:.98; e.vz*=e.ctrl?.95:.98;
+      e.x+=e.vx; e.y+=e.vy; e.z+=e.vz; e.life--; e.sz+=.06;
+      if(e.life<=0){ emotions.splice(i,1); continue; }
+      glowDot3(e.x,e.y,e.z,e.sz,e.r,e.g,e.b,Math.min(1,(e.life/e.maxLife)*1.3));
+    }
   }
 }
 
-function drawThreads() {
-  for (let i=mThreads.length-1;i>=0;i--) {
+function drawThreads(){
+  for(let i=mThreads.length-1;i>=0;i--){
     const m=mThreads[i];
-    if (m.breaking) m.prog=Math.max(0,m.prog-.03);
-    else m.prog=Math.min(1,m.prog+.02);
-    if (m.breaking&&m.prog<=0) { mThreads.splice(i,1); continue; }
-    const cx=m.sx+(m.ex-m.sx)*m.prog;
-    const cy=m.sy+(m.ey-m.sy)*m.prog;
-    const cz=m.sz+(m.ez-m.sz)*m.prog;
-    // FIX: hilos más brillantes
-    const a=(m.breaking?m.prog*180:180)*glowI*.8;
-    stroke3(m.sx,m.sy,m.sz, cx,cy,cz, m.r,m.g,m.b, a, 1.5);
+    if(m.breaking) m.prog=Math.max(0,m.prog-.03); else m.prog=Math.min(1,m.prog+.02);
+    if(m.breaking&&m.prog<=0){ mThreads.splice(i,1); continue; }
+    const cx=m.sx+(m.ex-m.sx)*m.prog,cy=m.sy+(m.ey-m.sy)*m.prog,cz=m.sz+(m.ez-m.sz)*m.prog;
+    stroke3(m.sx,m.sy,m.sz,cx,cy,cz,m.r,m.g,m.b,(m.breaking?m.prog*160:160)*glowI*.75,1.2);
   }
 }
 
-// FIX: colores de partículas más saturados y tamaño mayor
-function spawnPart(t, ctrl) {
-  const tx=t.x, ty=200, tz=t.z;
-  const dx=tx-t.x, dy=ty-t.y, dz=tz-t.z;
-  const len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
-  const sp=2+Math.random()*3;
+function spawnPart(t,ctrl){
+  const dy=200-t.y,len=Math.abs(dy)||1;
+  const sp=(1.5+Math.random()*2.5)*partSpeed;
   const mL=FIB[5+Math.floor(Math.random()*5)];
-
-  let pr, pg, pb;
-  if (ctrl) {
-    pr = 220+Math.random()*35;
-    pg =  60+Math.random()*80;
-    pb =  80+Math.random()*80;
-  } else {
-    pr = Math.min(255, t.r + 40 + Math.random()*60);
-    pg = Math.min(255, t.g + 40 + Math.random()*60);
-    pb = Math.min(255, t.b + 40 + Math.random()*60);
-  }
-
+  const szBase=map(emoFreq,0,1,1.5,6);
+  let pr,pg,pb;
+  if(ctrl){ pr=220+Math.random()*35; pg=60+Math.random()*80; pb=80+Math.random()*80; }
+  else { pr=Math.min(255,t.r+40+Math.random()*60); pg=Math.min(255,t.g+40+Math.random()*60); pb=Math.min(255,t.b+40+Math.random()*60); }
   emotions.push({
-    x:t.x, y:t.y, z:t.z,
-    vx:dx/len*sp + (Math.random()-.5)*1.5,
-    vy:dy/len*sp + (Math.random()-.5)*1.5,
-    vz:dz/len*sp + (Math.random()-.5)*1.5,
-    life:mL, maxLife:mL,
-    sz: 3+Math.random()*4, ctrl,
-    r: pr, g: pg, b: pb
+    x:t.x,y:t.y,z:t.z,
+    vx:(Math.random()-.5)*1.2*partSpeed, vy:dy/len*sp+(Math.random()-.5)*1.2*partSpeed, vz:(Math.random()-.5)*1.2*partSpeed,
+    life:mL,maxLife:mL, sz:szBase+Math.random()*2.5, ctrl, r:pr,g:pg,b:pb, onEdge:false
   });
 }
 
-// ── UTILS ─────────────────────────────────────────────────────
-function map(v,a,b,c,d) { return c+(d-c)*((v-a)/(b-a)); }
+function spawnPyramidEdgeParts(t,comp){
+  comp=(comp!==undefined)?comp:1.0;
+  const bs=120*PHI,by=200,ax=t.x,ay=t.y,az=t.z;
+  const raw=[[ax-bs,by,az-bs],[ax+bs,by,az-bs],[ax+bs,by,az+bs],[ax-bs,by,az+bs]];
+  const corners=raw.map(v=>[ax+(v[0]-ax)*comp,ay+(v[1]-ay)*comp,az+(v[2]-az)*comp]);
+  const eSpeedBase=map(emoFreq,0,1,0.007,0.020)*partSpeed;
+  for(let i=0;i<4;i++){
+    const c=corners[i],hue=(t.fibIdx*137.5+i*90)%360,[r,g,b]=hslToRgb(hue/360,0.95,0.85);
+    const mL=70+Math.floor(Math.random()*35);
+    emotions.push({ onEdge:true, x0:ax,y0:ay,z0:az, x1:c[0],y1:c[1],z1:c[2],
+      edgeT:0,edgeSpeed:eSpeedBase+Math.random()*0.009, x:ax,y:ay,z:az,
+      life:mL,maxLife:mL, sz:3.5+Math.random()*2.5, r,g,b, ctrl:false });
+  }
+  for(let i=0;i<4;i++){
+    if(Math.random()>0.55) continue;
+    const c1=corners[i],c2=corners[(i+1)%4],hue=(t.fibIdx*137.5+i*45+200)%360,[r,g,b]=hslToRgb(hue/360,0.90,0.80);
+    const mL=50+Math.floor(Math.random()*30);
+    emotions.push({ onEdge:true, x0:c1[0],y0:c1[1],z0:c1[2], x1:c2[0],y1:c2[1],z1:c2[2],
+      edgeT:0,edgeSpeed:eSpeedBase*1.2+Math.random()*0.012, x:c1[0],y:c1[1],z:c1[2],
+      life:mL,maxLife:mL, sz:2.5+Math.random()*2, r,g,b, ctrl:false });
+  }
+}
 
-function hslToRgb(h,s,l) {
+function spawnPyramidOnTap(t){
+  const mL=FIB[8+Math.floor(Math.random()*5)]*12;
+  xPyrs.push({ ax:t.x,ay:t.y,az:t.z,bx:t.x,bz:t.z,
+    bs:80+Math.random()*140,comp:0,speed:.018+Math.random()*.02,
+    maxLife:mL,life:mL, r:160+Math.random()*95,g:130+Math.random()*120,b:210+Math.random()*45 });
+  if(xPyrs.length>15) xPyrs.shift();
+}
+
+function map(v,a,b,c,d){ return c+(d-c)*((v-a)/(b-a)); }
+function hslToRgb(h,s,l){
   let r,g,b;
-  if (s===0) { r=g=b=l; }
-  else {
-    const q=l<.5?l*(1+s):l+s-l*s, p=2*l-q;
-    r=hue2rgb(p,q,h+1/3); g=hue2rgb(p,q,h); b=hue2rgb(p,q,h-1/3);
-  }
-  return [r*255,g*255,b*255];
+  if(s===0){r=g=b=l;}
+  else{ const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q; r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3); }
+  return[r*255,g*255,b*255];
 }
-function hue2rgb(p,q,t) {
-  if(t<0)t+=1; if(t>1)t-=1;
-  if(t<1/6)return p+(q-p)*6*t;
-  if(t<1/2)return q;
-  if(t<2/3)return p+(q-p)*(2/3-t)*6;
-  return p;
+function hue2rgb(p,q,t){
+  if(t<0)t+=1;if(t>1)t-=1;
+  if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;
 }
 
-// ── HUD ───────────────────────────────────────────────────────
-function updateHUD() {
-  document.getElementById('mode').textContent='Modo: '+MODES[viewMode];
-  document.getElementById('hover').textContent=hovIdx>=0?'⚡ HOVER timeline '+hovIdx+' | Glow '+glowI.toFixed(1)+'x':'';
-  document.getElementById('freq').textContent='Frec. emocional: '+emoFreq.toFixed(2)+' | Hilos: '+mThreads.length;
-  document.getElementById('cons').textContent='Consciencia: '+(consLv*100).toFixed(0)+'%';
+// ── HUD UPDATE ─────────────────────────────────────────────────
+function updateHUD(){
+  const pal=PALETTES[viewMode];
+  document.getElementById('mode-txt').textContent=MODES[viewMode];
+  const dot=document.getElementById('mode-dot');
+  dot.style.background=MODE_COLORS[viewMode];
+  dot.style.color=MODE_COLORS[viewMode];
+  document.getElementById('hud-palette').textContent='🎨 '+pal.name;
+  document.getElementById('hud-cons').textContent=viewMode===4?'Consciencia: '+(consLv*100).toFixed(0)+'%':'';
+  document.getElementById('freqval').textContent=emoFreq.toFixed(2);
+  document.getElementById('freqbar-fill').style.width=(emoFreq*100)+'%';
 }
 
-// ── INPUT ─────────────────────────────────────────────────────
-document.addEventListener('mousemove', e=>{
-  mouseX=e.clientX; mouseY=e.clientY;
-  if (dragOn) {
-    camY+=(e.clientX-lastMX)*.005;
-    camX=Math.max(-1.2,Math.min(1.2,camX+(e.clientY-lastMY)*.005));
-    lastMX=e.clientX; lastMY=e.clientY;
-    autoRot=false;
-  }
-});
-document.addEventListener('mousedown', e=>{
-  dragOn=true; lastMX=e.clientX; lastMY=e.clientY; autoRot=false;
-  const ti=hovIdx>=0?hovIdx:Math.floor(Math.random()*TL.length);
-  const t=TL[ti];
-  const mL=FIB[8+Math.floor(Math.random()*5)]*15;
-  xPyrs.push({
-    ax:t.x,ay:t.y,az:t.z, bx:t.x,bz:t.z,
-    bs:100+Math.random()*150, comp:0, speed:.015+Math.random()*.02,
-    maxLife:mL, life:mL,
-    r:160+Math.random()*95, g:130+Math.random()*120, b:210+Math.random()*45
-  });
-  if (xPyrs.length>20) xPyrs.shift();
-});
-document.addEventListener('mouseup', ()=>dragOn=false);
-// ── TOUCH ROTATION: sobre el canvas (aislado de botones) ──────
-C.addEventListener('touchstart', e=>{
-  if (e.touches.length !== 1) return;   // ignorar multi-touch aquí
+// ── TOUCH / INPUT ──────────────────────────────────────────────
+// Un dedo: orbitar. Dos dedos: spawn pirámide en el punto medio.
+let touchStartTime=0, touchMoved=false;
+
+C.addEventListener('touchstart',e=>{
   e.preventDefault();
-  dragOn=true;
-  lastMX=e.touches[0].clientX;
-  lastMY=e.touches[0].clientY;
-  autoRot=false;
+  if(e.touches.length===1){
+    dragOn=true;
+    lastMX=e.touches[0].clientX; lastMY=e.touches[0].clientY;
+    autoRot=false; touchMoved=false; touchStartTime=Date.now();
+  }
+  if(e.touches.length===2){
+    dragOn=false;
+    // spawn pirámide en el nodo más cercano al centro de los dos dedos
+    const mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    const my=(e.touches[0].clientY+e.touches[1].clientY)/2;
+    let best=-1,bestD=999;
+    for(let i=0;i<TL.length;i++){
+      const p=project(TL[i].x,TL[i].y,TL[i].z); if(!p) continue;
+      const d=Math.hypot(p.sx-mx,p.sy-my);
+      if(d<bestD){ bestD=d; best=i; }
+    }
+    spawnPyramidOnTap(TL[best>=0?best:selIdx]);
+  }
 },{passive:false});
 
-C.addEventListener('touchend', e=>{
+C.addEventListener('touchend',e=>{
+  e.preventDefault();
   dragOn=false;
+  // tap rápido sin mover → spawn partículas
+  if(!touchMoved && Date.now()-touchStartTime<300 && e.changedTouches.length===1){
+    const tx=e.changedTouches[0].clientX, ty=e.changedTouches[0].clientY;
+    let best=-1,bestD=60;
+    for(let i=0;i<TL.length;i++){
+      const p=project(TL[i].x,TL[i].y,TL[i].z); if(!p) continue;
+      const d=Math.hypot(p.sx-tx,p.sy-ty);
+      if(d<bestD){ bestD=d; best=i; }
+    }
+    const t=TL[best>=0?best:Math.floor(Math.random()*TL.length)];
+    for(let k=0;k<5;k++) spawnPart(t,false);
+  }
 },{passive:false});
 
-C.addEventListener('touchmove', e=>{
-  if (!dragOn || e.touches.length !== 1) return;  // solo 1 dedo y si hay drag activo
+C.addEventListener('touchmove',e=>{
   e.preventDefault();
-  camY += (e.touches[0].clientX - lastMX) * .005;
-  camX  = Math.max(-1.2, Math.min(1.2, camX + (e.touches[0].clientY - lastMY) * .005));
-  lastMX = e.touches[0].clientX;
-  lastMY = e.touches[0].clientY;
+  if(!dragOn||e.touches.length!==1) return;
+  const dx=e.touches[0].clientX-lastMX;
+  const dy=e.touches[0].clientY-lastMY;
+  if(Math.abs(dx)>4||Math.abs(dy)>4) touchMoved=true;
+  camY+=dx*.005;
+  camX=Math.max(-1.2,Math.min(1.2,camX+dy*.005));
+  lastMX=e.touches[0].clientX; lastMY=e.touches[0].clientY;
 },{passive:false});
 
-document.addEventListener('keydown', e=>{
-  const k=e.key;
-  const c=e.code;
-  if(k===' '){e.preventDefault();viewMode=(viewMode+1)%5;if(viewMode===3){matrixOn=true;mThreads.length=0;}if(viewMode===4){consLv=0;matrixOn=false;}}
-  if(k==='r'||k==='R') autoRot=!autoRot;
-  if(k==='s'||k==='S') selIdx=Math.floor(Math.random()*TL.length);
-  if(k==='c'||k==='C'){emotions.length=0;xPyrs.length=0;}
-  if(k==='+'||k==='='||c==='Equal'||c==='NumpadAdd') emoFreq=Math.min(1,emoFreq+.05);
-  if(k==='-'||k==='_'||c==='Minus'||c==='NumpadSubtract') emoFreq=Math.max(0,emoFreq-.05);
-  if(k==='b'||k==='B'){for(const m of mThreads)m.breaking=true;matrixOn=false;}
-  if(k==='w'||k==='W') { viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.1); }
-  if(k==='f'||k==='F') showFib=!showFib;
+// ── BOTONES ────────────────────────────────────────────────────
+function changeMode(){
+  viewMode=(viewMode+1)%5;
+  if(viewMode===3){matrixOn=true;mThreads.length=0;}
+  if(viewMode===4){consLv=0;matrixOn=false;}
+  updatePaletteTargets();
+  // flash visual en el botón
+  const btn=document.getElementById('btn-modo');
+  btn.style.borderColor=MODE_COLORS[viewMode];
+  btn.style.color=MODE_COLORS[viewMode];
+  setTimeout(()=>{ btn.style.borderColor=''; btn.style.color=''; },600);
+}
+
+document.getElementById('btn-modo').addEventListener('touchstart',e=>{e.stopPropagation();changeMode();},{passive:true});
+document.getElementById('btn-rot').addEventListener('touchstart',e=>{
+  e.stopPropagation(); autoRot=!autoRot;
+  document.getElementById('btn-rot').textContent=autoRot?'⟳ ROT':'⏸ ROT';
+},{passive:true});
+document.getElementById('btn-s').addEventListener('touchstart',e=>{
+  e.stopPropagation();
+  // primeros 15 nodos: radios de 2.5 a 610 — siempre visibles
+  selIdx=Math.floor(Math.random()*15);
+},{passive:true});
+document.getElementById('btn-fib').addEventListener('touchstart',e=>{
+  e.stopPropagation(); showFib=!showFib;
+  document.getElementById('btn-fib').style.opacity=showFib?'1':'0.4';
+},{passive:true});
+document.getElementById('btn-c').addEventListener('touchstart',e=>{
+  e.stopPropagation(); emotions.length=0; xPyrs.length=0;
+},{passive:true});
+document.getElementById('btn-hud').addEventListener('touchstart',e=>{
+  e.stopPropagation();
+  hudVisible=!hudVisible;
+  const items=['hud-top','hud-phi','freqbar'];
+  items.forEach(id=>{
+    document.getElementById(id).classList.toggle('ui-hidden',!hudVisible);
+  });
+  document.getElementById('btn-hud').textContent=hudVisible?'👁 HUD':'🙈 HUD';
+},{passive:true});
+
+// ── SLIDERS ────────────────────────────────────────────────────
+document.getElementById('sl-freq').addEventListener('input',function(){
+  emoFreq=this.value/100;
+  document.getElementById('sl-freq-val').textContent=emoFreq.toFixed(2);
+});
+document.getElementById('sl-speed').addEventListener('input',function(){
+  partSpeed=this.value/10;
+  document.getElementById('sl-speed-val').textContent=partSpeed.toFixed(1);
+});
+document.getElementById('sl-density').addEventListener('input',function(){
+  partDensity=this.value/10;
+  document.getElementById('sl-density-val').textContent=partDensity.toFixed(1);
 });
 
-// ── TOUCH UI AUTO-DETECT ──────────────────────────────────────
-(function(){
-  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  if (!isTouch) return;
-
-  document.getElementById('touch-ui').style.display = 'block';
-  const hudKb = document.querySelectorAll('#hud div:not([id])');
-  hudKb.forEach(el => el.style.display = 'none');
-  document.getElementById('hud').style.fontSize = '12px';
-  document.getElementById('hud-r').style.display = 'none';
-
-  document.getElementById('btn-modo').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    viewMode=(viewMode+1)%5;
-    if(viewMode===3){matrixOn=true;mThreads.length=0;}
-    if(viewMode===4){consLv=0;matrixOn=false;}
-  },{passive:false});
-
-  document.getElementById('btn-r').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    autoRot=!autoRot;
-    document.getElementById('btn-r').textContent = autoRot ? 'ROT ●' : 'ROT';
-  },{passive:false});
-
-  document.getElementById('btn-s').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    selIdx=Math.floor(Math.random()*TL.length);
-  },{passive:false});
-
-  document.getElementById('btn-f').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    showFib=!showFib;
-    document.getElementById('btn-f').textContent = showFib ? 'FIB ●' : 'FIB';
-  },{passive:false});
-
-  document.getElementById('btn-c').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    emotions.length=0; xPyrs.length=0;
-  },{passive:false});
-
-  document.getElementById('btn-b').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    for(const m of mThreads) m.breaking=true; matrixOn=false;
-  },{passive:false});
-
-  document.getElementById('btn-w').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.15);
-  },{passive:false});
-
-  document.getElementById('btn-plus').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    emoFreq=Math.min(1,emoFreq+.05);
-  },{passive:false});
-
-  document.getElementById('btn-minus').addEventListener('touchstart', e=>{
-    e.preventDefault(); e.stopPropagation();
-    emoFreq=Math.max(0,emoFreq-.05);
-  },{passive:false});
-
-  // pinch zoom
-  let lastPinchDist=0;
-  window.addEventListener('touchstart', e=>{
-    if(e.touches.length===2){
-      lastPinchDist=Math.hypot(
-        e.touches[0].clientX-e.touches[1].clientX,
-        e.touches[0].clientY-e.touches[1].clientY
-      );
-    }
-  },{passive:true});
-  window.addEventListener('touchmove', e=>{
-    if(e.touches.length===2){
-      const d=Math.hypot(
-        e.touches[0].clientX-e.touches[1].clientX,
-        e.touches[0].clientY-e.touches[1].clientY
-      );
-      const delta=d-lastPinchDist;
-      camX=Math.max(-1.2,Math.min(1.2,camX-delta*.002));
-      lastPinchDist=d;
-    }
-  },{passive:true});
-
-  // tap para pirámide — sobre el canvas, separado del drag
-  let tapStartX=0, tapStartY=0, tapMoved=false;
-  C.addEventListener('touchstart', e=>{
-    if(e.touches.length===1){
-      tapStartX=e.touches[0].clientX;
-      tapStartY=e.touches[0].clientY;
-      tapMoved=false;
-    }
-  },{passive:true});
-  C.addEventListener('touchmove', e=>{
-    if(e.touches.length===1){
-      const dx=e.touches[0].clientX-tapStartX;
-      const dy=e.touches[0].clientY-tapStartY;
-      if(Math.hypot(dx,dy)>10) tapMoved=true;
-    }
-  },{passive:true});
-  C.addEventListener('touchend', e=>{
-    if(!tapMoved && e.changedTouches.length===1){
-      const ti=Math.floor(Math.random()*TL.length);
-      const t=TL[ti];
-      const mL=FIB[8+Math.floor(Math.random()*5)]*15;
-      xPyrs.push({
-        ax:t.x,ay:t.y,az:t.z, bx:t.x,bz:t.z,
-        bs:100+Math.random()*150, comp:0, speed:.015+Math.random()*.02,
-        maxLife:mL, life:mL,
-        r:160+Math.random()*95, g:130+Math.random()*120, b:210+Math.random()*45
-      });
-      if(xPyrs.length>20) xPyrs.shift();
-    }
-  },{passive:true});
-})();
-
+// ── INIT ───────────────────────────────────────────────────────
+updatePaletteTargets(); // modo 1 = Azul Cuántico
 loop();
 </script>
 </body>
