@@ -333,19 +333,42 @@ function loop(){
 
 // ── MODES ──────────────────────────────────────────────────────
 function modeField(){
+  drawMacroIcosahedron();
   const connMult=map(emoFreq,0,1,1.0,4.5);
+  const macroVerts = getMacroVerts();
+  const ry2 = camY*0.3+frame*0.001, rx2 = camX*0.3;
+  const cY2 = Math.cos(ry2), sY2 = Math.sin(ry2);
+  const cX2 = Math.cos(rx2), sX2 = Math.sin(rx2);
+
   for(let i=0;i<TL.length;i++){
     const t=TL[i];
+    // Nodo al vértice macro más cercano
+    let bestV=-1, bestD=999999;
+    for(let v=0;v<macroVerts.length;v++){
+      const mv=macroVerts[v];
+      const px= mv[0]*cY2+mv[2]*sY2;
+      const pz=-mv[0]*sY2+mv[2]*cY2;
+      const fy= mv[1]*cX2-pz*sX2;
+      const d=Math.hypot(t.x-px, t.y-fy, t.z-pz);
+      if(d<bestD){bestD=d;bestV=v;}
+    }
+    if(bestV>=0){
+      const mv=macroVerts[bestV];
+      const px= mv[0]*cY2+mv[2]*sY2;
+      const pz=-mv[0]*sY2+mv[2]*cY2;
+      const fy= mv[1]*cX2-pz*sX2;
+      stroke3(t.x,t.y,t.z,px,fy,pz,t.r,t.g,t.b,75,0.7);
+    }
     for(let j=i+1;j<TL.length;j++){
       const o=TL[j];
       const d=Math.hypot(t.x-o.x,t.y-o.y,t.z-o.z);
       const cd=FIB[t.fibIdx%20]*3*connMult;
       if(d<cd){
-        const a=(1-d/cd)*100;
-        stroke3(t.x,t.y,t.z,o.x,o.y,o.z,(t.r+o.r)/2,(t.g+o.g)/2,(t.b+o.b)/2,a,0.6);
+        const a=(1-d/cd)*160;
+        stroke3(t.x,t.y,t.z,o.x,o.y,o.z,(t.r+o.r)/2,(t.g+o.g)/2,(t.b+o.b)/2,a,1.6);
       }
     }
-    drawTL(t,false,1.0);
+    drawIcosahedron(t,false,1.0);
   }
   drawTLSel(TL[selIdx]);
   const fldInt=Math.max(1,Math.round(22/partDensity));
@@ -473,6 +496,124 @@ function drawConSphere(lv){
 }
 
 // ── DRAW HELPERS ───────────────────────────────────────────────
+
+// ── ICOSAEDRO (mobile) ─────────────────────────────────────────
+const ICO_V = [
+  [ 0,  1,  PHI], [ 0, -1,  PHI], [ 0,  1, -PHI], [ 0, -1, -PHI],
+  [ 1,  PHI,  0], [-1,  PHI,  0], [ 1, -PHI,  0], [-1, -PHI,  0],
+  [ PHI,  0,  1], [-PHI,  0,  1], [ PHI,  0, -1], [-PHI,  0, -1]
+];
+const ICO_E = [
+  [0,1],[0,4],[0,5],[0,8],[0,9],
+  [1,6],[1,7],[1,8],[1,9],
+  [2,3],[2,4],[2,5],[2,10],[2,11],
+  [3,6],[3,7],[3,10],[3,11],
+  [4,5],[4,8],[4,10],
+  [5,9],[5,11],
+  [6,7],[6,8],[6,10],
+  [7,9],[7,11],
+  [8,10],[9,11]
+];
+
+function drawIcosahedron(t, hov, fade) {
+  const pulse = Math.sin(frame * 0.05 + t.phase) * 0.15 + 0.85;
+  const bs    = FIB[Math.min(t.fibIdx % 8, 7)] * 0.26;
+  const sz    = (bs + 3.2) * pulse;
+  const ry    = frame * 0.008 + t.phase;
+  const rx    = frame * 0.005 + t.phase * 0.7;
+  const cosY  = Math.cos(ry), sinY = Math.sin(ry);
+  const cosX  = Math.cos(rx), sinX = Math.sin(rx);
+
+  const vproj = ICO_V.map(v => {
+    let px =  v[0]*cosY + v[2]*sinY;
+    let py =  v[1];
+    let pz = -v[0]*sinY + v[2]*cosY;
+    let fy =  py*cosX - pz*sinX;
+    let fz =  py*sinX + pz*cosX;
+    return project(t.x + px*sz, t.y + fy*sz, t.z + fz*sz);
+  });
+
+  const alpha = fade * pulse;
+  for (const [a, b] of ICO_E) {
+    const pa = vproj[a], pb = vproj[b];
+    if (!pa || !pb) continue;
+    const depthFade = Math.max(0.2, Math.min(1, 800 / Math.min(pa.depth, pb.depth)));
+    ctx.globalAlpha = Math.min(1, alpha * depthFade * 0.82);
+    ctx.strokeStyle = `rgb(${t.r|0},${t.g|0},${t.b|0})`;
+    ctx.lineWidth   = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(pa.sx, pa.sy);
+    ctx.lineTo(pb.sx, pb.sy);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  glowDot3(t.x, t.y, t.z, sz * 0.30, t.r, t.g, t.b, alpha * 0.85);
+}
+
+
+// ── MACRO-ICOSAEDRO que envuelve toda la escena ────────────────
+// Radio grande para que contenga todos los nodos
+const MACRO_R = 520;
+// Los 12 vértices escalados al radio macro
+function getMacroVerts() {
+  const r = MACRO_R;
+  const verts = ICO_V.map(v => {
+    const len = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    return [v[0]/len*r, v[1]/len*r, v[2]/len*r];
+  });
+  return verts;
+}
+
+function drawMacroIcosahedron() {
+  const verts = getMacroVerts();
+  const pal   = PALETTES[viewMode];
+  const pulse = 0.5 + Math.sin(frame * 0.012) * 0.5;
+
+  // Girar lentamente con la cámara (misma rotación que camY pero más lenta)
+  const ry = camY * 0.3 + frame * 0.001;
+  const rx = camX * 0.3;
+  const cosY = Math.cos(ry), sinY = Math.sin(ry);
+  const cosX = Math.cos(rx), sinX = Math.sin(rx);
+
+  // Proyectar vértices con rotación propia suave
+  const vp = verts.map(v => {
+    let px =  v[0]*cosY + v[2]*sinY;
+    let py =  v[1];
+    let pz = -v[0]*sinY + v[2]*cosY;
+    let fy =  py*cosX - pz*sinX;
+    let fz =  py*sinX + pz*cosX;
+    return project(px, fy, fz);
+  });
+
+  // Dibujar las 30 aristas del macro-icosaedro
+  const hue = ((pal.hueShift + 180) % 360 + 360) % 360;
+  const [cr,cg,cb] = hslToRgb(hue/360, pal.sat, Math.min(1, pal.light + 0.15));
+
+  for (const [a, b] of ICO_E) {
+    const pa = vp[a], pb = vp[b];
+    if (!pa || !pb) continue;
+    const alpha = (0.18 + pulse * 0.12);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = `rgb(${cr|0},${cg|0},${cb|0})`;
+    ctx.lineWidth   = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(pa.sx, pa.sy);
+    ctx.lineTo(pb.sx, pb.sy);
+    ctx.stroke();
+  }
+
+  // Vértices del macro con pequeño glow
+  for (const p of vp) {
+    if (!p) continue;
+    ctx.globalAlpha = 0.55 + pulse * 0.35;
+    ctx.fillStyle   = `rgb(${cr|0},${cg|0},${cb|0})`;
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawTL(t,hov,fade){
   const pulse=Math.sin(frame*.05+t.phase)*.3+.7;
   const bs=FIB[Math.min(t.fibIdx%8,7)]*.3;
