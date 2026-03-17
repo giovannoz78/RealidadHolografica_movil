@@ -1234,6 +1234,7 @@ let touchStartTime=0, touchMoved=false;
 
 C.addEventListener('touchstart',e=>{
   e.preventDefault();
+  initAudio();
   if(e.touches.length===1){
     dragOn=true;
     lastMX=e.touches[0].clientX; lastMY=e.touches[0].clientY;
