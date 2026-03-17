@@ -366,6 +366,7 @@ function modeFull(){
   drawTLSel(TL[selIdx]);
   drawPyramidFromTL(TL[selIdx],1.0);
   drawGrid(TL[selIdx]);
+  drawBaseWaves(TL[selIdx]);   // ← ondas concéntricas
   const si1=Math.max(2,Math.round(map(emoFreq,0,1,14,3)/partDensity));
   const si2=Math.max(2,Math.round(map(emoFreq,0,1,12,3)/partDensity));
   if(frame%si1===0) spawnPart(TL[selIdx],false);
@@ -555,31 +556,135 @@ function drawGrid(t){
   }
 }
 
-function drawSpirals(){
-  const pal=PALETTES[viewMode];
-  const spiralHues=[
-    ((pal.hueShift      )%360+360)%360,
-    ((pal.hueShift+120  )%360+360)%360,
-    ((pal.hueShift+240  )%360+360)%360,
+// ── ONDAS CONCÉNTRICAS EN LA BASE (mobile) ────────────────────
+function drawBaseWaves(t) {
+  // 2D puro — siempre visible, sin project()
+  const cx = C.width  * 0.5;
+  const cy = C.height * 0.62;  // ligeramente bajo el centro = base de pirámide
+  const pal  = PALETTES[viewMode];
+  const numW = 6;
+
+  for (let w = 0; w < numW; w++) {
+    const phase = (frame * 0.007 + w / numW) % 1.0;
+    const maxR  = Math.min(C.width, C.height) * (0.10 + w * 0.09);
+    const rx    = maxR * phase;
+    const ry    = rx * 0.20;
+    if (rx < 2) continue;
+
+    const alpha = Math.sin(phase * Math.PI) * 0.85;
+    if (alpha < 0.02) continue;
+
+    const hue        = ((pal.hueShift + w * 40) % 360 + 360) % 360;
+    const [cr,cg,cb] = hslToRgb(hue/360, pal.sat, Math.min(1, pal.light + 0.25));
+
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = `rgb(${cr|0},${cg|0},${cb|0})`;
+    ctx.lineWidth   = Math.max(0.8, (1 - phase) * 4);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+
+function drawSpirals() {
+  const pal = PALETTES[viewMode];
+  const spiralHues = [
+    ((pal.hueShift      ) % 360 + 360) % 360,
+    ((pal.hueShift + 120) % 360 + 360) % 360,
+    ((pal.hueShift + 240) % 360 + 360) % 360,
   ];
-  const cols=spiralHues.map(h=>hslToRgb(h/360,Math.min(1,pal.sat+0.05),Math.min(1,pal.light+0.1)));
-  for(let s=0;s<3;s++){
-    const off=s*Math.PI*2/3,pts=[];
-    for(let i=0;i<70;i++){
-      const a=i*Math.PI*2/PHI,r=FIB[Math.min(i%13,12)]*2;
-      const lx=Math.cos(a)*r,lz=Math.sin(a)*r,ly=Math.sin(a*PHI)*50;
-      const rx=lx*Math.cos(fibPh*.3+off)+lz*Math.sin(fibPh*.3+off);
-      const rz=-lx*Math.sin(fibPh*.3+off)+lz*Math.cos(fibPh*.3+off);
-      const p=project(rx,ly*Math.cos(fibPh*.2)-rz*Math.sin(fibPh*.2),ly*Math.sin(fibPh*.2)+rz*Math.cos(fibPh*.2));
-      if(p) pts.push(p);
+  const cols = spiralHues.map(h =>
+    hslToRgb(h/360, Math.min(1, pal.sat+0.05), Math.min(1, pal.light+0.1))
+  );
+
+  const TOTAL_PTS  = 100;          // puntos totales por espiral
+  const DRAW_SPEED = 0.12;         // puntos nuevos por frame (fraccionario OK)
+  const HOLD_FRAMES = 90;          // frames que se queda completa antes de borrar
+  const ERASE_SPEED = 0.18;        // puntos que se borran por frame
+
+  for (let s = 0; s < 3; s++) {
+    const off = s * Math.PI * 2 / 3;
+
+    // Estado por espiral guardado en el objeto (persistente entre frames)
+    if (!drawSpirals._state) drawSpirals._state = [];
+    if (!drawSpirals._state[s]) {
+      drawSpirals._state[s] = { head: 0, tail: 0, holding: 0, erasing: false };
     }
-    if(pts.length<2) continue;
-    const [cr,cg,cb]=cols[s];
-    ctx.strokeStyle=`rgba(${cr|0},${cg|0},${cb|0},0.55)`; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.moveTo(pts[0].sx,pts[0].sy);
-    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].sx,pts[i].sy); ctx.stroke();
+    const st = drawSpirals._state[s];
+
+    // Fase de crecimiento
+    if (!st.erasing) {
+      st.head = Math.min(TOTAL_PTS, st.head + DRAW_SPEED);
+      if (st.head >= TOTAL_PTS) {
+        st.holding++;
+        if (st.holding >= HOLD_FRAMES) {
+          st.erasing = true;
+          st.holding = 0;
+        }
+      }
+    } else {
+      // Fase de borrado: el tail persigue al head
+      st.tail = Math.min(TOTAL_PTS, st.tail + ERASE_SPEED);
+      if (st.tail >= TOTAL_PTS) {
+        // Reinicio completo
+        st.head = 0; st.tail = 0; st.erasing = false;
+      }
+    }
+
+    const headIdx = Math.floor(st.head);
+    const tailIdx = Math.floor(st.tail);
+    if (headIdx - tailIdx < 1) continue;
+
+    // Precomputar todos los puntos proyectados
+    const pts = [];
+    for (let i = 0; i < TOTAL_PTS; i++) {
+      const a  = i * Math.PI * 2 / PHI;
+      const r  = FIB[Math.min(i % 13, 12)] * 2;
+      const lx = Math.cos(a) * r, lz = Math.sin(a) * r;
+      const ly = Math.sin(a * PHI) * 50;
+      const rx = lx * Math.cos(fibPh*.3+off) + lz * Math.sin(fibPh*.3+off);
+      const rz =-lx * Math.sin(fibPh*.3+off) + lz * Math.cos(fibPh*.3+off);
+      const p  = project(
+        rx,
+        ly * Math.cos(fibPh*.2) - rz * Math.sin(fibPh*.2),
+        ly * Math.sin(fibPh*.2) + rz * Math.cos(fibPh*.2)
+      );
+      pts.push(p);
+    }
+
+    const [cr, cg, cb] = cols[s];
+
+    // Dibujar segmento activo (tail → head)
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let started = false;
+    for (let i = tailIdx; i <= headIdx && i < TOTAL_PTS; i++) {
+      const p = pts[i]; if (!p) continue;
+      // alpha: fade in al frente, fade out en la cola
+      const tRatio = (i - tailIdx) / Math.max(1, headIdx - tailIdx);
+      const alpha  = Math.sin(tRatio * Math.PI) * 0.85 + 0.15;
+      ctx.strokeStyle = `rgba(${cr|0},${cg|0},${cb|0},${Math.min(1,alpha)})`;
+      if (!started) { ctx.moveTo(p.sx, p.sy); started = true; }
+      else            ctx.lineTo(p.sx, p.sy);
+    }
+    ctx.stroke();
+
+    // Punto brillante en la cabeza (el que se está dibujando)
+    if (headIdx < TOTAL_PTS && pts[headIdx]) {
+      const hp = pts[headIdx];
+      glowDot3(0, 0, 0, 0, cr, cg, cb, 0); // warm-up (no-op)
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle   = `rgb(${Math.min(255,(cr|0)+80)},${Math.min(255,(cg|0)+80)},${Math.min(255,(cb|0)+80)})`;
+      ctx.beginPath();
+      ctx.arc(hp.sx, hp.sy, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
   }
 }
+
 
 function drawExtras(){
   for(let i=xPyrs.length-1;i>=0;i--){
