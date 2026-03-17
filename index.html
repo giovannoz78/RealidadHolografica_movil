@@ -178,6 +178,7 @@ input[type=range].green-slider::-webkit-slider-thumb {
     <button class="btn" id="btn-fib">∿ FIB</button>
     <button class="btn danger" id="btn-c">✕ CLR</button>
     <button class="btn" id="btn-hud">👁 HUD</button>
+    <button class="btn accent" id="btn-shot">📷</button>
   </div>
   <!-- Fila 2: sliders -->
   <div id="btn-row2">
@@ -304,6 +305,179 @@ function stroke3(x1,y1,z1,x2,y2,z2,r,g,b,a,w){
   ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
 }
 
+
+// ── AUDIO GENERATIVO — MODO LIBERACIÓN ────────────────────────
+// Se inicializa solo con un gesto del usuario (política de browsers)
+
+let audioCtx   = null;
+let audioNodes = {};   // nodos activos
+let audioOn    = false;
+let prevMode   = -1;
+
+// Frecuencias base en proporción Áurea y Fibonacci
+// 432 Hz como frecuencia raíz (afinación alternativa)
+const BASE_HZ  = 432;
+const FIB_RATIOS = [1, PHI, PHI*PHI, 2*PHI, 3*PHI, 5*PHI, 8*PHI];
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function startLibeSound() {
+  if (!audioCtx) return;
+  if (audioOn) return;
+  audioOn = true;
+
+  // Master gain con fade in suave
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0, audioCtx.currentTime);
+  master.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 3.0);
+  master.connect(audioCtx.destination);
+
+  // Reverb artificial con ConvolverNode simulado via delay
+  const delay1 = audioCtx.createDelay(2.0);
+  const delay2 = audioCtx.createDelay(3.5);
+  delay1.delayTime.value = 0.18;
+  delay2.delayTime.value = 0.37;
+  const fbGain1 = audioCtx.createGain(); fbGain1.gain.value = 0.35;
+  const fbGain2 = audioCtx.createGain(); fbGain2.gain.value = 0.25;
+  delay1.connect(fbGain1); fbGain1.connect(delay1);
+  delay2.connect(fbGain2); fbGain2.connect(delay2);
+  delay1.connect(master);  delay2.connect(master);
+
+  const wet = audioCtx.createGain(); wet.gain.value = 0.5;
+  wet.connect(delay1); wet.connect(delay2);
+
+  audioNodes.master = master;
+  audioNodes.wet    = wet;
+  audioNodes.oscs   = [];
+
+  // 7 osciladores con frecuencias en proporciones Fibonacci
+  FIB_RATIOS.forEach((ratio, i) => {
+    const freq = BASE_HZ * ratio / FIB_RATIOS[3]; // normalizado al 3er armónico
+
+    // Oscilador principal
+    const osc  = audioCtx.createOscillator();
+    osc.type   = i < 2 ? 'sine' : (i < 4 ? 'triangle' : 'sine');
+    osc.frequency.value = freq;
+
+    // LFO para vibrato lento (rate Fibonacci)
+    const lfo  = audioCtx.createOscillator();
+    lfo.frequency.value = 0.1 + i * 0.07 * PHI;  // muy lento
+    lfo.type = 'sine';
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = freq * 0.003;  // profundidad de vibrato mínima
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    // Gain individual — arranca silencioso
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+
+    osc.connect(gain);
+    gain.connect(master);
+    gain.connect(wet);
+
+    osc.start();
+    lfo.start();
+
+    audioNodes.oscs.push({ osc, gain, lfo, lfoGain, baseFreq: freq, idx: i });
+  });
+
+  // Pulso rítmico sub-grave (ritmo en phi Hz ≈ 0.618 Hz)
+  const pulse     = audioCtx.createOscillator();
+  pulse.type      = 'sine';
+  pulse.frequency.value = BASE_HZ * 0.25;   // sub-grave
+  const pulseGain = audioCtx.createGain();
+  pulseGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  const pulseLFO  = audioCtx.createOscillator();
+  pulseLFO.frequency.value = 1 / PHI;       // 0.618 Hz ≈ ritmo áureo
+  pulseLFO.type = 'sine';
+  const pulseMod  = audioCtx.createGain();
+  pulseMod.gain.value = 0.04;
+  pulseLFO.connect(pulseMod);
+  pulseMod.connect(pulseGain.gain);
+  pulse.connect(pulseGain);
+  pulseGain.connect(master);
+  pulse.start(); pulseLFO.start();
+  audioNodes.pulse     = pulse;
+  audioNodes.pulseGain = pulseGain;
+  audioNodes.pulseLFO  = pulseLFO;
+}
+
+function updateLibeSound(consLv) {
+  if (!audioCtx || !audioOn || !audioNodes.oscs) return;
+  const t   = audioCtx.currentTime;
+  const lv  = Math.max(0, Math.min(1, consLv));
+
+  // Master: crece con consLv
+  if (audioNodes.master)
+    audioNodes.master.gain.setTargetAtTime(0.04 + lv * 0.20, t, 0.5);
+
+  // Cada oscilador se activa escalonadamente según consLv
+  audioNodes.oscs.forEach((node, i) => {
+    const threshold = i / FIB_RATIOS.length;
+    const localLv   = Math.max(0, (lv - threshold) / (1 - threshold + 0.001));
+    const targetGain = localLv * (0.06 - i * 0.006);
+
+    node.gain.gain.setTargetAtTime(Math.max(0, targetGain), t, 1.2);
+
+    // Frequency drift: a mayor consLv, los armónicos suben levemente
+    const driftHz = node.baseFreq * (1 + lv * 0.015 * Math.sin(i * PHI));
+    node.osc.frequency.setTargetAtTime(driftHz, t, 2.0);
+  });
+
+  // Pulso sub-grave: aparece al 40% y crece
+  if (audioNodes.pulseGain) {
+    const pulseVol = Math.max(0, (lv - 0.4) / 0.6) * 0.06;
+    audioNodes.pulseGain.gain.setTargetAtTime(pulseVol, t, 1.5);
+  }
+}
+
+function stopLibeSound() {
+  if (!audioCtx || !audioOn) return;
+  audioOn = false;
+  const t = audioCtx.currentTime;
+
+  // Fade out suave
+  if (audioNodes.master)
+    audioNodes.master.gain.linearRampToValueAtTime(0, t + 2.5);
+
+  // Detener todo después del fade
+  setTimeout(() => {
+    try {
+      audioNodes.oscs && audioNodes.oscs.forEach(n => {
+        n.osc.stop(); n.lfo.stop();
+      });
+      audioNodes.pulse    && audioNodes.pulse.stop();
+      audioNodes.pulseLFO && audioNodes.pulseLFO.stop();
+    } catch(e) {}
+    audioNodes = {};
+  }, 3000);
+}
+
+// Actualizar audio cada frame en modeLiberation
+function tickAudio() {
+  if (viewMode === 4) {
+    if (!audioOn) startLibeSound();
+    updateLibeSound(consLv);
+  } else {
+    if (audioOn) stopLibeSound();
+  }
+}
+
+
+// ── CAPTURA DE PANTALLA ────────────────────────────────────────
+function takeScreenshot() {
+  // Renderizar un frame extra sin el trail para captura limpia
+  const link    = document.createElement('a');
+  const ts      = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  link.download = `realidad-holografica-${ts}.png`;
+  link.href     = C.toDataURL('image/png');
+  link.click();
+}
+
 // ── LOOP ───────────────────────────────────────────────────────
 function loop(){
   requestAnimationFrame(loop);
@@ -328,7 +502,7 @@ function loop(){
   else if(viewMode===3) modeMatrix();
   else if(viewMode===4) modeLiberation();
 
-  drawExtras(); drawParticles(); drawThreads(); updateHUD();
+  drawExtras(); drawParticles(); drawThreads(); tickAudio(); updateHUD();
 }
 
 // ── MODES ──────────────────────────────────────────────────────
@@ -1023,6 +1197,9 @@ document.getElementById('btn-fib').addEventListener('touchstart',e=>{
 },{passive:true});
 document.getElementById('btn-c').addEventListener('touchstart',e=>{
   e.stopPropagation(); emotions.length=0; xPyrs.length=0;
+},{passive:true});
+document.getElementById('btn-shot').addEventListener('touchstart',e=>{
+  e.stopPropagation(); takeScreenshot();
 },{passive:true});
 document.getElementById('btn-hud').addEventListener('touchstart',e=>{
   e.stopPropagation();
