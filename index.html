@@ -121,7 +121,7 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
 input[type=range] {
   -webkit-appearance:none; appearance:none;
   width:100%; height:4px;
-  background:rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.10);
   border-radius:2px; outline:none;
 }
 input[type=range]::-webkit-slider-thumb {
@@ -580,6 +580,7 @@ function modeSel(comp){
   for(let i=0;i<TL.length;i++) if(i!==selIdx) drawTL(TL[i],false,0.2);
   drawTLSel(TL[selIdx]);
   drawPyramidFromTL(TL[selIdx],comp);
+  drawPyramidMirror(TL[selIdx],comp);
   if(frame%18===0) spawnPart(TL[selIdx],false);
   const si=Math.max(2,Math.round(map(emoFreq,0,1,16,3)/partDensity));
   if(frame%si===0) spawnPyramidEdgeParts(TL[selIdx],comp);
@@ -845,6 +846,87 @@ function drawPyramidFromTL(t,comp){
   drawPyramid(t.x,t.y,t.z,t.x,t.z,120*PHI,comp,180,200,255,200);
 }
 
+
+// ── PIRÁMIDE ESPEJO (mobile) ───────────────────────────────────
+function drawPyramidMirror(t, comp, bsOverride) {
+  const ax=t.x, az=t.z;
+  const ay_orig = t.y;
+  const base_y  = 200;
+  const bs      = bsOverride !== undefined ? bsOverride : 120*PHI;
+
+  const ay_mirror = base_y + (base_y - ay_orig);
+
+  const corners = [
+    [ax-bs, base_y, az-bs], [ax+bs, base_y, az-bs],
+    [ax+bs, base_y, az+bs], [ax-bs, base_y, az+bs]
+  ];
+
+  const av = corners.map(v => [
+    ax     + (v[0] - ax)     * comp,
+    base_y + (v[1] - base_y) * comp,
+    az     + (v[2] - az)     * comp
+  ]);
+  const apex = [
+    ax,
+    base_y + (ay_mirror - base_y) * comp,
+    az
+  ];
+
+  const pal = PALETTES[viewMode];
+  const hue = ((pal.hueShift + 180) % 360 + 360) % 360;
+  const [mr,mg,mb] = hslToRgb(hue/360, pal.sat, Math.min(1, pal.light + 0.1));
+  const alpha = (160/255) * glowI * 0.85;
+
+  ctx.strokeStyle = `rgba(${mr|0},${mg|0},${mb|0},${Math.min(1,alpha)})`;
+  ctx.lineWidth   = 1.4;
+
+  for (const v of av) {
+    const p1=project(apex[0],apex[1],apex[2]);
+    const p2=project(v[0],v[1],v[2]);
+    if (!p1||!p2) continue;
+    ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
+  }
+  for (let i=0; i<4; i++) {
+    const n=(i+1)%4;
+    const p1=project(av[i][0],av[i][1],av[i][2]);
+    const p2=project(av[n][0],av[n][1],av[n][2]);
+    if (!p1||!p2) continue;
+    ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
+  }
+
+  const pSpeed = map(emoFreq,0,1,0.005,0.018)*partSpeed;
+  const ph3    = (frame*pSpeed*0.9 + 0.25) % 1.0;
+  for (let i=0; i<4; i++) {
+    for (let k=0; k<3; k++) {
+      const t2 = (ph3 + k/3) % 1.0;
+      const px = apex[0] + (av[i][0]-apex[0])*t2;
+      const py = apex[1] + (av[i][1]-apex[1])*t2;
+      const pz = apex[2] + (av[i][2]-apex[2])*t2;
+      glowDot3(px, py, pz, 4, mr, mg, mb, Math.sin(t2*Math.PI)*0.85);
+    }
+  }
+
+  if (comp > 0.3) {
+    for (let k=1; k<5; k++) {
+      const t2=k/5;
+      const ps = av.map(v=>[
+        apex[0]+(v[0]-apex[0])*t2,
+        apex[1]+(v[1]-apex[1])*t2,
+        apex[2]+(v[2]-apex[2])*t2
+      ]);
+      ctx.strokeStyle=`rgba(${mr|0},${mg|0},${mb|0},${map(t2,0,1,.04,.14)*comp})`;
+      ctx.lineWidth=.5;
+      for (let i=0;i<4;i++){
+        const ni=(i+1)%4;
+        const p1=project(ps[i][0],ps[i][1],ps[i][2]);
+        const p2=project(ps[ni][0],ps[ni][1],ps[ni][2]);
+        if (!p1||!p2) continue;
+        ctx.beginPath(); ctx.moveTo(p1.sx,p1.sy); ctx.lineTo(p2.sx,p2.sy); ctx.stroke();
+      }
+    }
+  }
+}
+
 function drawPyramid(ax,ay,az,bx,bz,bs,comp,r,g,b,alpha){
   const base_y=200;
   const corners=[[bx-bs,base_y,bz-bs],[bx+bs,base_y,bz-bs],[bx+bs,base_y,bz+bs],[bx-bs,base_y,bz+bs]];
@@ -1032,7 +1114,12 @@ function drawExtras(){
   for(let i=xPyrs.length-1;i>=0;i--){
     const ep=xPyrs[i]; ep.comp=Math.min(1,ep.comp+ep.speed); ep.life--;
     if(ep.life<=0){ xPyrs.splice(i,1); continue; }
-    drawPyramid(ep.ax,ep.ay,ep.az,ep.bx,ep.bz,ep.bs*ep.comp,(ep.life/ep.maxLife)*.85,ep.r,ep.g,ep.b,190);
+    const af=(ep.life/ep.maxLife)*.85;
+    drawPyramid(ep.ax,ep.ay,ep.az,ep.bx,ep.bz,ep.bs*ep.comp,af,ep.r,ep.g,ep.b,190);
+    if(viewMode===1){
+      const fakeT={x:ep.ax,y:ep.ay,z:ep.az,fibIdx:0,phase:ep.ax*0.01};
+      drawPyramidMirror(fakeT, ep.comp*af, ep.bs);
+    }
   }
 }
 
@@ -1154,16 +1241,6 @@ C.addEventListener('touchstart',e=>{
   }
   if(e.touches.length===2){
     dragOn=false;
-    // spawn pirámide en el nodo más cercano al centro de los dos dedos
-    const mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
-    const my=(e.touches[0].clientY+e.touches[1].clientY)/2;
-    let best=-1,bestD=999;
-    for(let i=0;i<TL.length;i++){
-      const p=project(TL[i].x,TL[i].y,TL[i].z); if(!p) continue;
-      const d=Math.hypot(p.sx-mx,p.sy-my);
-      if(d<bestD){ bestD=d; best=i; }
-    }
-    spawnPyramidOnTap(TL[best>=0?best:selIdx]);
   }
 },{passive:false});
 
@@ -1181,6 +1258,8 @@ C.addEventListener('touchend',e=>{
     }
     const t=TL[best>=0?best:Math.floor(Math.random()*TL.length)];
     for(let k=0;k<5;k++) spawnPart(t,false);
+    // En modo 1 el tap también genera pirámide espejada
+    spawnPyramidOnTap(t);
   }
 },{passive:false});
 
