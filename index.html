@@ -73,7 +73,10 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
 
 /* fila 1: botones de modo y acción */
 #btn-row1 {
-  display:flex; gap:6px; justify-content:center; margin-bottom:8px;
+  display:flex; gap:5px; justify-content:center; margin-bottom:5px; flex-wrap:nowrap;
+}
+#btn-row2b {
+  display:flex; gap:5px; justify-content:center; margin-bottom:8px;
 }
 /* fila 2: sliders */
 #btn-row2 {
@@ -87,13 +90,14 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
   color:#c8dcff;
   font-family:monospace;
   font-size:11px;
-  padding:10px 12px;
+  padding:9px 10px;
   cursor:pointer;
   user-select:none;
   text-shadow:0 0 6px rgba(100,180,255,0.5);
   box-shadow:0 0 8px rgba(60,120,255,0.15);
   transition:background 0.15s, border-color 0.15s, transform 0.1s;
-  min-width:52px;
+  min-width:0;
+  flex:1;
   text-align:center;
   -webkit-user-select:none;
 }
@@ -102,7 +106,7 @@ canvas { position:fixed; top:0; left:0; z-index:1; }
 .btn.accent:active { background:rgba(120,80,20,0.7); }
 .btn.danger { border-color:rgba(255,80,80,0.5); color:#ff9999; }
 .btn.danger:active { background:rgba(120,20,20,0.7); }
-.btn.wide { min-width:90px; font-size:12px; letter-spacing:0.5px; }
+.btn.wide { font-size:12px; letter-spacing:0.5px; flex:1.5; }
 
 /* sliders táctiles */
 .slider-wrap {
@@ -170,15 +174,20 @@ input[type=range].green-slider::-webkit-slider-thumb {
 
 <!-- Panel de controles táctiles -->
 <div id="controls">
-  <!-- Fila 1: acciones principales -->
+  <!-- Fila 1a: modo + acciones principales -->
   <div id="btn-row1">
     <button class="btn wide accent" id="btn-modo">MODO →</button>
     <button class="btn" id="btn-rot">⟳ ROT</button>
     <button class="btn" id="btn-s">⚡ TL</button>
     <button class="btn" id="btn-fib">∿ FIB</button>
+  </div>
+  <!-- Fila 1b: acciones secundarias -->
+  <div id="btn-row2b">
     <button class="btn danger" id="btn-c">✕ CLR</button>
     <button class="btn" id="btn-hud">👁 HUD</button>
     <button class="btn accent" id="btn-shot">📷</button>
+    <button class="btn" id="btn-w">✦ LIB</button>
+    <button class="btn" id="btn-b">⊘ HILOS</button>
   </div>
   <!-- Fila 2: sliders -->
   <div id="btn-row2">
@@ -240,6 +249,7 @@ let showFib=true;
 let partSpeed=0.5;
 let partDensity=0.5;
 let hudVisible=true;
+let selFlash=0;  // frames de flash al cambiar selIdx
 const emotions=[], mThreads=[], xPyrs=[];
 
 // ── TIMELINES ──────────────────────────────────────────────────
@@ -493,6 +503,23 @@ function loop(){
     TL[i].r+=(TL[i].tr-TL[i].r)*LERP;
     TL[i].g+=(TL[i].tg-TL[i].g)*LERP;
     TL[i].b+=(TL[i].tb-TL[i].b)*LERP;
+  }
+
+  // Flash visual al cambiar de nodo seleccionado
+  if(selFlash>0){
+    selFlash--;
+    const ft=selFlash/40;
+    const fp=project(TL[selIdx].x,TL[selIdx].y,TL[selIdx].z);
+    if(fp){
+      const fr=80+Math.round(ft*120);
+      ctx.globalAlpha=ft*0.9;
+      ctx.strokeStyle=`rgb(255,255,180)`;
+      ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.arc(fp.sx,fp.sy,fr,0,Math.PI*2);
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
   }
 
   if(showFib) drawSpirals();
@@ -1188,8 +1215,10 @@ document.getElementById('btn-rot').addEventListener('touchstart',e=>{
 },{passive:true});
 document.getElementById('btn-s').addEventListener('touchstart',e=>{
   e.stopPropagation();
-  // primeros 15 nodos: radios de 2.5 a 610 — siempre visibles
   selIdx=Math.floor(Math.random()*15);
+  selFlash=40;
+  for(let k2=0;k2<8;k2++) spawnPart(TL[selIdx],false);
+  if(viewMode===0){ viewMode=1; updatePaletteTargets(); }
 },{passive:true});
 document.getElementById('btn-fib').addEventListener('touchstart',e=>{
   e.stopPropagation(); showFib=!showFib;
@@ -1200,6 +1229,16 @@ document.getElementById('btn-c').addEventListener('touchstart',e=>{
 },{passive:true});
 document.getElementById('btn-shot').addEventListener('touchstart',e=>{
   e.stopPropagation(); takeScreenshot();
+},{passive:true});
+document.getElementById('btn-w').addEventListener('touchstart',e=>{
+  e.stopPropagation(); initAudio(); viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.1); updatePaletteTargets();
+  document.getElementById('btn-w').style.color='#ffcc44';
+  setTimeout(()=>{ document.getElementById('btn-w').style.color=''; },600);
+},{passive:true});
+document.getElementById('btn-b').addEventListener('touchstart',e=>{
+  e.stopPropagation(); for(const m of mThreads) m.breaking=true; matrixOn=false;
+  document.getElementById('btn-b').style.borderColor='rgba(255,80,80,0.8)';
+  setTimeout(()=>{ document.getElementById('btn-b').style.borderColor=''; },600);
 },{passive:true});
 document.getElementById('btn-hud').addEventListener('touchstart',e=>{
   e.stopPropagation();
