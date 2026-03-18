@@ -188,6 +188,7 @@ input[type=range].green-slider::-webkit-slider-thumb {
     <button class="btn accent" id="btn-shot">📷</button>
     <button class="btn" id="btn-w">✦ LIB</button>
     <button class="btn" id="btn-b">⊘ HILOS</button>
+    <button class="btn" id="btn-labels">⌗ IDS</button>
   </div>
   <!-- Fila 2: sliders -->
   <div id="btn-row2">
@@ -221,11 +222,11 @@ const MODES = ["CAMPO HOLOGRÁFICO","PROYECCIÓN SEL.","PROYECCIÓN COMP.","MATR
 const MODE_COLORS = ["#6699ff","#44bbff","#44ffaa","#ff5588","#ffcc44"];
 
 const PALETTES = [
-  { hueShift:0,   sat:0.85, light:0.72, compress:1.0,  name:"Arcoiris Fibonacci"  },
-  { hueShift:200, sat:0.90, light:0.65, compress:0.35, name:"Azul Cuántico"        },
-  { hueShift:130, sat:0.95, light:0.62, compress:0.40, name:"Esmeralda Geométrica" },
-  { hueShift:320, sat:1.00, light:0.58, compress:0.45, name:"Rojo Emocional"       },
-  { hueShift:45,  sat:0.70, light:0.88, compress:0.30, name:"Dorado Transcendente" },
+  { hueShift:0,   sat:1.00, light:0.55, compress:1.0,  name:"Arcoiris Fibonacci"  },
+  { hueShift:200, sat:1.00, light:0.55, compress:0.35, name:"Azul Cuántico"        },
+  { hueShift:130, sat:1.00, light:0.55, compress:0.40, name:"Esmeralda Geométrica" },
+  { hueShift:320, sat:1.00, light:0.55, compress:0.45, name:"Rojo Emocional"       },
+  { hueShift:45,  sat:1.00, light:0.55, compress:0.30, name:"Dorado Transcendente" },
 ];
 
 function paletteColor(fibIdx, pal) {
@@ -258,7 +259,7 @@ for(let i=0;i<34;i++){
   const angle=i*Math.PI*2/PHI;
   const radius=FIB[Math.min(i,19)]*2.5;
   const hue=(i*137.5)%360;
-  const [r,g,b]=hslToRgb(hue/360,0.85,0.72);
+  const [r,g,b]=hslToRgb(hue/360,1.0,0.55);
   TL.push({ x:Math.cos(angle)*radius, y:-150+(Math.random()*80-40), z:Math.sin(angle)*radius,
             r,g,b, tr:r,tg:g,tb:b, fibIdx:i, phase:Math.random()*Math.PI*2 });
 }
@@ -488,10 +489,39 @@ function takeScreenshot() {
   link.click();
 }
 
+
+// ── LABELS DE NODOS ───────────────────────────────────────────
+let showLabels = false;
+
+function drawNodeLabels() {
+  if (!showLabels) return;
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  for (let i = 0; i < TL.length; i++) {
+    const t = TL[i];
+    const p = project(t.x, t.y, t.z);
+    if (!p) continue;
+    const isSelected = (i === selIdx);
+    const fib = FIB[Math.min(i, 19)];
+    // Fondo semitransparente
+    const label = `${i} · fib:${fib}`;
+    const w = ctx.measureText(label).width + 8;
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = isSelected ? '#2a2000' : '#0a1020';
+    ctx.fillRect(p.sx - w/2, p.sy - 22, w, 14);
+    // Texto
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = isSelected ? '#ffee44' : `rgb(${t.r|0},${t.g|0},${t.b|0})`;
+    ctx.fillText(label, p.sx, p.sy - 11);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+}
+
 // ── LOOP ───────────────────────────────────────────────────────
 function loop(){
   requestAnimationFrame(loop);
-  frame++; fibPh+=0.018;
+  frame++; fibPh+=0.008;
   if(autoRot) camY+=0.003;
   ctx.fillStyle='rgba(6,8,16,0.88)'; ctx.fillRect(0,0,C.width,C.height);
 
@@ -529,7 +559,7 @@ function loop(){
   else if(viewMode===3) modeMatrix();
   else if(viewMode===4) modeLiberation();
 
-  drawExtras(); drawParticles(); drawThreads(); tickAudio(); updateHUD();
+  drawNodeLabels(); drawExtras(); drawParticles(); drawThreads(); tickAudio(); updateHUD();
 }
 
 // ── MODES ──────────────────────────────────────────────────────
@@ -558,15 +588,16 @@ function modeField(){
       const px= mv[0]*cY2+mv[2]*sY2;
       const pz=-mv[0]*sY2+mv[2]*cY2;
       const fy= mv[1]*cX2-pz*sX2;
-      stroke3(t.x,t.y,t.z,px,fy,pz,t.r,t.g,t.b,75,0.7);
+      stroke3(t.x,t.y,t.z,px,fy,pz,t.r,t.g,t.b,140,1.0);
     }
     for(let j=i+1;j<TL.length;j++){
       const o=TL[j];
       const d=Math.hypot(t.x-o.x,t.y-o.y,t.z-o.z);
       const cd=FIB[t.fibIdx%20]*3*connMult;
       if(d<cd){
-        const a=(1-d/cd)*160;
-        stroke3(t.x,t.y,t.z,o.x,o.y,o.z,(t.r+o.r)/2,(t.g+o.g)/2,(t.b+o.b)/2,a,1.6);
+        const a=(1-d/cd)*200;
+        const nr=t.r*0.7+o.r*0.3, ng=t.g*0.7+o.g*0.3, nb=t.b*0.7+o.b*0.3;
+        stroke3(t.x,t.y,t.z,o.x,o.y,o.z,nr,ng,nb,a,1.8);
       }
     }
     drawIcosahedron(t,false,1.0);
@@ -807,10 +838,10 @@ function drawMacroIcosahedron() {
   // Vértices del macro con pequeño glow
   for (const p of vp) {
     if (!p) continue;
-    ctx.globalAlpha = 0.55 + pulse * 0.35;
+    ctx.globalAlpha = 0.80 + pulse * 0.20;
     ctx.fillStyle   = `rgb(${cr|0},${cg|0},${cb|0})`;
     ctx.beginPath();
-    ctx.arc(p.sx, p.sy, 2.5, 0, Math.PI * 2);
+    ctx.arc(p.sx, p.sy, 3.5, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
@@ -820,7 +851,7 @@ function drawTL(t,hov,fade){
   const pulse=Math.sin(frame*.05+t.phase)*.3+.7;
   const bs=FIB[Math.min(t.fibIdx%8,7)]*.3;
   const sz=(bs+4);
-  glowDot3(t.x,t.y,t.z,sz*.55,t.r,t.g,t.b,(200*pulse*fade)/255);
+  glowDot3(t.x,t.y,t.z,sz*.55,t.r,t.g,t.b,Math.min(1,(220*pulse*fade)/255));
   drawRing3(t.x,t.y,t.z,(bs*6+18)*.45,t.r,t.g,t.b,100*pulse*fade,.45,frame*.02);
 }
 
@@ -1314,6 +1345,10 @@ document.getElementById('btn-w').addEventListener('touchstart',e=>{
   e.stopPropagation(); initAudio(); viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.1); updatePaletteTargets();
   document.getElementById('btn-w').style.color='#ffcc44';
   setTimeout(()=>{ document.getElementById('btn-w').style.color=''; },600);
+},{passive:true});
+document.getElementById('btn-labels').addEventListener('touchstart',e=>{
+  e.stopPropagation(); showLabels=!showLabels;
+  document.getElementById('btn-labels').style.opacity=showLabels?'1':'0.5';
 },{passive:true});
 document.getElementById('btn-b').addEventListener('touchstart',e=>{
   e.stopPropagation(); for(const m of mThreads) m.breaking=true; matrixOn=false;
