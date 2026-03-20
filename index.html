@@ -177,18 +177,17 @@ input[type=range].green-slider::-webkit-slider-thumb {
   <!-- Fila 1a: modo + acciones principales -->
   <div id="btn-row1">
     <button class="btn wide accent" id="btn-modo">MODO →</button>
-    <button class="btn" id="btn-rot">⟳ ROT</button>
-    <button class="btn" id="btn-s">⚡ TL</button>
-    <button class="btn" id="btn-fib">∿ FIB</button>
+    <button class="btn" id="btn-rot">ROT</button>
+    <button class="btn" id="btn-s">TL</button>
+    <button class="btn" id="btn-fib">FIB</button>
   </div>
   <!-- Fila 1b: acciones secundarias -->
   <div id="btn-row2b">
-    <button class="btn danger" id="btn-c">✕ CLR</button>
-    <button class="btn" id="btn-hud">👁 HUD</button>
-    <button class="btn accent" id="btn-shot">📷</button>
-    <button class="btn" id="btn-w">✦ LIB</button>
-    <button class="btn" id="btn-b">⊘ HILOS</button>
-    <button class="btn" id="btn-labels">⌗ IDS</button>
+    <button class="btn danger" id="btn-c">CLR</button>
+    <button class="btn" id="btn-hud">HUD</button>
+    <button class="btn accent" id="btn-shot">SHOT</button>
+    <button class="btn" id="btn-b">HILOS</button>
+    <button class="btn" id="btn-labels">IDS</button>
   </div>
   <!-- Fila 2: sliders -->
   <div id="btn-row2">
@@ -1263,7 +1262,7 @@ function updateHUD(){
   const dot=document.getElementById('mode-dot');
   dot.style.background=MODE_COLORS[viewMode];
   dot.style.color=MODE_COLORS[viewMode];
-  document.getElementById('hud-palette').textContent='🎨 '+pal.name;
+  document.getElementById('hud-palette').textContent=pal.name;
   document.getElementById('hud-cons').textContent=viewMode===4?'Consciencia: '+(consLv*100).toFixed(0)+'%':'';
   document.getElementById('freqval').textContent=emoFreq.toFixed(2);
   document.getElementById('freqbar-fill').style.width=(emoFreq*100)+'%';
@@ -1332,7 +1331,7 @@ function changeMode(){
 document.getElementById('btn-modo').addEventListener('touchstart',e=>{e.stopPropagation();changeMode();},{passive:true});
 document.getElementById('btn-rot').addEventListener('touchstart',e=>{
   e.stopPropagation(); autoRot=!autoRot;
-  document.getElementById('btn-rot').textContent=autoRot?'⟳ ROT':'⏸ ROT';
+  document.getElementById('btn-rot').textContent=autoRot?'ROT':'ROT';
 },{passive:true});
 document.getElementById('btn-s').addEventListener('touchstart',e=>{
   e.stopPropagation();
@@ -1351,11 +1350,6 @@ document.getElementById('btn-c').addEventListener('touchstart',e=>{
 document.getElementById('btn-shot').addEventListener('touchstart',e=>{
   e.stopPropagation(); takeScreenshot();
 },{passive:true});
-document.getElementById('btn-w').addEventListener('touchstart',e=>{
-  e.stopPropagation(); initAudio(); viewMode=4; matrixOn=false; consLv=Math.min(1,consLv+.1); updatePaletteTargets();
-  document.getElementById('btn-w').style.color='#ffcc44';
-  setTimeout(()=>{ document.getElementById('btn-w').style.color=''; },600);
-},{passive:true});
 document.getElementById('btn-labels').addEventListener('touchstart',e=>{
   e.stopPropagation(); showLabels=!showLabels;
   document.getElementById('btn-labels').style.opacity=showLabels?'1':'0.5';
@@ -1372,7 +1366,7 @@ document.getElementById('btn-hud').addEventListener('touchstart',e=>{
   items.forEach(id=>{
     document.getElementById(id).classList.toggle('ui-hidden',!hudVisible);
   });
-  document.getElementById('btn-hud').textContent=hudVisible?'👁 HUD':'🙈 HUD';
+  document.getElementById('btn-hud').textContent=hudVisible?'HUD':'HUD';
 },{passive:true});
 
 // ── SLIDERS ────────────────────────────────────────────────────
