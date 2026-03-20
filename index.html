@@ -1051,7 +1051,7 @@ function drawSpirals() {
     ((pal.hueShift + 240) % 360 + 360) % 360,
   ];
   const cols = spiralHues.map(h =>
-    hslToRgb(h/360, Math.min(1, pal.sat+0.05), Math.min(1, pal.light+0.1))
+    hslToRgb(h/360, 1.0, 0.55)
   );
 
   const TOTAL_PTS  = 100;          // puntos totales por espiral
@@ -1183,8 +1183,18 @@ function drawThreads(){
     const m=mThreads[i];
     if(m.breaking) m.prog=Math.max(0,m.prog-.03); else m.prog=Math.min(1,m.prog+.02);
     if(m.breaking&&m.prog<=0){ mThreads.splice(i,1); continue; }
-    const cx=m.sx+(m.ex-m.sx)*m.prog,cy=m.sy+(m.ey-m.sy)*m.prog,cz=m.sz+(m.ez-m.sz)*m.prog;
-    stroke3(m.sx,m.sy,m.sz,cx,cy,cz,m.r,m.g,m.b,(m.breaking?m.prog*160:160)*glowI*.75,1.2);
+    const cx=m.sx+(m.ex-m.sx)*m.prog;
+    const cy=m.sy+(m.ey-m.sy)*m.prog;
+    const cz=m.sz+(m.ez-m.sz)*m.prog;
+    const baseAlpha=(m.breaking?m.prog*160:160)*glowI*.75;
+    stroke3(m.sx,m.sy,m.sz,cx,cy,cz,m.r,m.g,m.b,baseAlpha,1.2);
+    stroke3(m.sx,m.sy,m.sz,cx,cy,cz,m.r,m.g,m.b,baseAlpha*0.25,4);
+    const pulse=0.6+Math.sin(frame*0.18+i*1.3)*0.4;
+    glowDot3(cx,cy,cz,5,m.r,m.g,m.b,(baseAlpha/255)*pulse*1.1);
+    if(Math.random()<0.08){
+      const t2=Math.random()*m.prog;
+      glowDot3(m.sx+(m.ex-m.sx)*t2,m.sy+(m.ey-m.sy)*t2,m.sz+(m.ez-m.sz)*t2,3+Math.random()*2.5,m.r,m.g,m.b,0.85);
+    }
   }
 }
 
